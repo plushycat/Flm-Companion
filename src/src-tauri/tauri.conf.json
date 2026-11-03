@@ -38,7 +38,7 @@
     "resources": {
       "target/release/WebView2Loader.dll": "WebView2Loader.dll"
     },
-    "publisher": "JulienM77",
+    "publisher": "plushycat",
     "windows": {
       "nsis": {
         "languages": [
