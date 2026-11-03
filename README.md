@@ -1,119 +1,121 @@
-<div align="center">
+# FLM Companion
 
-<h1 style="border: none;">🤖 Flm Compagnon</h1>
+Windows desktop companion for [FastFlowLM](https://github.com/FastFlowLM/FastFlowLM).
 
-[![Requires FastFlowLM](https://img.shields.io/badge/Requires-FastFlowLM-red?style=flat-square&logo=github)](https://github.com/FastFlowLM/FastFlowLM)
+This fork turns FLM into a practical local model workstation: launch models, manage servers, monitor hardware, chat through an OpenAI-compatible endpoint, and keep server state visible from the system tray.
 
-[![GitHub release](https://img.shields.io/github/v/release/plushycat/flm-companion?style=flat-square&label=Version)](https://github.com/plushycat/flm-companion/releases)
-[![Build](https://img.shields.io/github/actions/workflow/status/plushycat/flm-companion/main.yml?style=flat-square&label=Build)](https://github.com/plushycat/flm-companion/actions/workflows/main.yml)
-[![License](https://img.shields.io/github/license/plushycat/flm-companion?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/plushycat/Flm-Companion?style=flat-square&label=release)](https://github.com/plushycat/Flm-Companion/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/plushycat/Flm-Companion/main.yml?style=flat-square&label=build)](https://github.com/plushycat/Flm-Companion/actions/workflows/main.yml)
+[![License](https://img.shields.io/github/license/plushycat/Flm-Companion?style=flat-square)](LICENSE)
 
-[![Platform](https://img.shields.io/badge/Platform-Windows-blue?style=flat-square)](https://github.com/plushycat/flm-companion/releases)
-[![Tauri](https://img.shields.io/badge/Built%20with-Tauri-blueviolet?style=flat-square&logo=tauri)](https://tauri.app)
+## What this fork adds
 
-</div>
+- Server-first dashboard for starting and stopping FLM.
+- Chat connected to the active server.
+- Companion-owned API proxy at `127.0.0.1:52626` that exposes only the active model through `/v1/models`.
+- Accurate installed/download model sizes.
+- Live RAM, FLM process RAM, NPU usage, launch context, and TTFT visibility.
+- Presets for repeatable server launches.
+- System-tray controls for server state, installed model selection, presets, logs, and features.
+- FLM process cleanup on stop, restart, application quit, and server failure.
+- Persistent selected model and launch settings.
+- Startup checks and update flows for Companion and FLM.
+- English, French, and Japanese UI.
+- Optional Caveman mode for short, dense chat replies.
 
-## What this fork adds and fixes
+## Requirements
 
-This fork keeps upstream FLM compatibility while making Companion a clearer local model launcher and serving client.
+- Windows.
+- [FastFlowLM](https://github.com/FastFlowLM/FastFlowLM) `0.9.37` or newer.
+- Current AMD NPU driver supported by FLM.
 
-* **Serves only the active model**: Companion-owned API proxy presents a single active model at `/v1/models` instead of exposing every downloaded model.
-* **Fixes model size reporting**: downloaded and existing models use their actual on-disk sizes.
-* **Makes launch cost visible**: live free RAM, FLM process RAM, NPU usage, launch context versus model maximum, TTFT, context use, and context-aware RAM estimates.
-* **Prevents stale FLM processes**: owned FLM processes are cleaned up on stop, restart, window close, and application exit.
-* **Improves serving workflow**: server-first dashboard, chat connected to the active server, launch parameters in a modal, presets, collapsible navigation, and copy-ready Developer API examples.
-* **Preserves working state**: selected model and launch settings persist between sessions.
-* **Adds Caveman mode**: optional short, high-density replies for chat.
+FLM remains separate software. Install it from its [upstream releases](https://github.com/FastFlowLM/FastFlowLM/releases), then launch Companion.
 
-Built artifacts are published on the [fork releases page](https://github.com/plushycat/Flm-Companion/releases).
+## Install
 
-## 📝 Description
+Download the latest Windows installer from the [Companion releases page](https://github.com/plushycat/Flm-Companion/releases).
 
-Flm Compagnon is a modern GUI designed to accompany and manage the **FastFlowLM (FLM)** project. It offers a smooth user experience to interact with your local AI models, monitor the server, and manage your configurations.
+After installation:
 
-> [!IMPORTANT]
-> This application requires **[FastFlowLM (FLM)](https://github.com/FastFlowLM/FastFlowLM)** to be installed on your system. Without it, Flm Compagnon will not function.
+1. Install FastFlowLM if needed.
+2. Open FLM Companion.
+3. Select an installed model.
+4. Configure launch options or choose a preset.
+5. Start the server.
+6. Use Chat or connect a client to the local API.
 
-## ✨ Features
+Default ports:
 
-* **Models**: Model manager (download, delete, inspect details).
-* **Server**: Configuration and management of the FLM server instance.
-* **Resource Monitor**: Real-time NPU and RAM usage monitoring with historical charts when server is running.
-* **Presets**: Save and manage custom server configurations as presets for quick access.
-* **System Tray**: Quick access to server controls, **model selection**, **presets**, and status directly from the notification area.
-* **Auto-Updates**: Automatic update check at startup for both FLM Companion and FastFlowLM with integrated installer.
-* **Auto-start**: Option to launch the application automatically at Windows startup.
-* **Start Minimized**: Option to launch the application minimized to the system tray (configurable in settings).
-* **Settings**: Application customization.
-* **About**: View application version, hardware information, FLM changelog, and check for updates.
-* **Multilingual**: Interface management in **English, French, and Japanese**.
-* **Theme**: Management of light and dark themes.
+| Service | Port |
+| --- | ---: |
+| FastFlowLM server | `52625` |
+| Companion API proxy | `52626` |
 
-## 📸 Videos
+## Development
 
-### 🗂️ Interface
-![gif demo interface](screen/demo_interface.gif)
+Prerequisites:
 
-### 🔔 System Tray
-![gif demo systreay](screen/demo_notif.gif)
+- Node.js.
+- Rust stable for Windows GNU.
+- FastFlowLM installed locally for runtime testing.
 
-## 📋 To do
+Install dependencies:
 
-<details>
+```powershell
+Push-Location src
+npm install
+Pop-Location
+```
 
-<summary>Completed</summary>
+Run the native Tauri app:
 
-* [X] Add NPU and RAM usage monitoring and display (real-time stats)
-* [X] Clean code and optimisation
-* [X] Fix the server management design for consistency
-* [X] Add a version check for the companion application (+ changelog)
-* [X] Add caching for the list of models, CPU version, and RAM
-* [X] Force an update of the model list on the server configuration side when models are modified (DLL, delete)
-* [X] Add menus to the notification area icon (server management, models)
-* [X] Complete the translation of all texts for multilingual support
-* [X] Flm update 0.9.21 → add the option to launch the server without a model using ASR for Whisper
-* [X] Flm update 0.9.22 → add the option to launch the server with host parameters
-* [X] Add a startup check when FLM is launched (verify model availability and server prerequisites)
-* [X] Add an automatic update check at application startup with integrated installer
-* [X] Finalize saving and loading of custom usage configuration (persist user presets)
-* [X] Add preset management system (save, delete, and quick access to server configurations)
-* [X] Display FLM changelog in About view
-* [X] GitHub API rate limiting with caching to prevent 403 errors
-* [X] Ensure "Run at startup" setting is preserved across updates and installer actions
-* [X] Add an in-app memory / resource calculator for chosen model + server configuration
-  
-</details>
+```powershell
+npm --prefix src run tauri dev
+```
 
-## 🤝 Contribution
+Run checks:
 
-This project is open-source and open to contributions! Feel free to propose improvements via **Pull Requests** or report issues.
+```powershell
+Push-Location src
+npm run lint
+npm run build
+Pop-Location
 
-## 🚀 Installation and Development
+cargo check --manifest-path src\src-tauri\Cargo.toml
+```
 
-To run the project in development mode, you will need [Rust](https://www.rust-lang.org/) and [Node.js](https://nodejs.org/).
+Build release artifacts:
 
-1. Install JavaScript dependencies:
+```powershell
+npm --prefix src run tauri build
+```
 
-    ```bash
-    npm install
-    ```
+The installer is generated under `src/src-tauri/target/release/bundle/`.
 
-2. Run the application in development mode:
+## Project layout
 
-    ```bash
-    npm run tauri dev
-    ```
+```text
+src/src/          React, TypeScript, services, hooks, and views
+src/src-tauri/    Tauri shell, tray, process cleanup, system metrics, API proxy
+changelog/        Release notes
+screen/            UI and tray demos
+```
 
-To build the project in release mode, you will need [Rust](https://www.rust-lang.org/) and [Node.js](https://nodejs.org/).
+Frontend state flows through `AppContext`. FLM process and model operations live in `src/src/services/flm.ts`. Native tray and API-proxy behavior lives in `src/src-tauri/src/`.
 
-1. Install JavaScript dependencies:
+## Screens
 
-    ```bash
-    npm install
-    ```
+![Application interface](screen/demo_interface.gif)
 
-2. Build the application in release mode:
+![System tray](screen/demo_notif.gif)
 
-    ```bash
-    npm run tauri build
-    ```
+## Links
+
+- [Companion source](https://github.com/plushycat/Flm-Companion)
+- [Companion releases](https://github.com/plushycat/Flm-Companion/releases)
+- [FastFlowLM upstream](https://github.com/FastFlowLM/FastFlowLM)
+- [FastFlowLM releases](https://github.com/FastFlowLM/FastFlowLM/releases)
+
+## License
+
+See [LICENSE](LICENSE).

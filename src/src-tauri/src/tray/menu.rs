@@ -4,103 +4,6 @@ use tauri::AppHandle;
 use crate::tray::icons::ThemeIcons;
 use crate::types::TrayMenuParams;
 
-struct UnifiedModel {
-    name: String,
-    is_installed: bool,
-    is_startable: bool,
-}
-
-fn build_models_menu(
-    app: &AppHandle,
-    params: &TrayMenuParams,
-    icons: &ThemeIcons,
-) -> tauri::Result<Submenu<tauri::Wry>> {
-    let texts = &params.texts;
-
-    // Create a unified list of all models
-    let mut unified_models = Vec::new();
-
-    // Add installed models
-    for model_name in &params.installed_models {
-        unified_models.push(UnifiedModel {
-            name: model_name.clone(),
-            is_installed: true,
-            is_startable: params.startable_models.contains(model_name),
-        });
-    }
-
-    // Add available models (not installed)
-    // Exclude those already in installed_models to avoid duplicates
-    for model_name in &params.available_models {
-        if !params.installed_models.contains(model_name) {
-            unified_models.push(UnifiedModel {
-                name: model_name.clone(),
-                is_installed: false,
-                is_startable: false,
-            });
-        }
-    }
-
-    // Sort alphabetically by name
-    unified_models.sort_by(|a, b| a.name.cmp(&b.name));
-
-    // Main Models menu
-    let models_menu = Submenu::new(app, &texts.models_menu, true)?;
-    let _ = models_menu.set_icon(Some(icons.cpu.clone()));
-
-    // Create a submenu for each model
-    for model in unified_models {
-        let model_submenu = Submenu::new(app, &model.name, true)?;
-
-        if model.is_installed {
-            // Installed model: hard drive icon
-            let _ = model_submenu.set_icon(Some(icons.hard_drive.clone()));
-
-            if model.is_startable {
-                // Action: Start Server
-                let start_item = IconMenuItem::with_id(
-                    app,
-                    format!("start_model_{}", model.name),
-                    &texts.start_with_model,
-                    true,
-                    Some(icons.play.clone()),
-                    None::<&str>,
-                )?;
-                let _ = model_submenu.append(&start_item);
-            }
-
-            // Action: Delete
-            let delete_item = IconMenuItem::with_id(
-                app,
-                format!("delete_model_{}", model.name),
-                &texts.delete_model,
-                true,
-                Some(icons.trash.clone()),
-                None::<&str>,
-            )?;
-            let _ = model_submenu.append(&delete_item);
-        } else {
-            // Available model: download icon
-            let _ = model_submenu.set_icon(Some(icons.download.clone()));
-
-            // Action: Download
-            let download_item = IconMenuItem::with_id(
-                app,
-                format!("download_model_{}", model.name),
-                &texts.download_model,
-                true,
-                Some(icons.download.clone()),
-                None::<&str>,
-            )?;
-            let _ = model_submenu.append(&download_item);
-        }
-
-        let _ = models_menu.append(&model_submenu);
-    }
-
-    Ok(models_menu)
-}
-
 pub fn build_tray_menu(
     app: &AppHandle,
     params: &TrayMenuParams,
@@ -318,12 +221,8 @@ pub fn build_tray_menu(
     )?;
     let separator = PredefinedMenuItem::separator(app)?;
 
-    // Build Models menu
-    let models_menu = build_models_menu(app, params, icons)?;
-
-    // Disable Models and Server menus if FLM is not available
+    // Disable Server menu if FLM is not available
     if !params.is_flm_available {
-        let _ = models_menu.set_enabled(false);
         let _ = server_submenu.set_enabled(false);
     }
 
@@ -331,7 +230,6 @@ pub fn build_tray_menu(
     menu.append(&app_info_i)?;
     menu.append(&flm_info_i)?;
     menu.append(&separator_top)?;
-    menu.append(&models_menu)?;
     menu.append(&server_submenu)?;
     menu.append(&settings_i)?;
     menu.append(&separator)?;
@@ -346,7 +244,7 @@ pub fn build_initial_menu(app: &tauri::App, icons: &ThemeIcons) -> tauri::Result
     let app_info_i = MenuItem::with_id(app, "app_info", &title, false, None::<&str>)?;
     let separator_top = PredefinedMenuItem::separator(app)?;
 
-    let settings_i = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+    let settings_i = MenuItem::with_id(app, "settings", "Open App", true, None::<&str>)?;
 
     let quit_i = IconMenuItem::with_id(
         app,

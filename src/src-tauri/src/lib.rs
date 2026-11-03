@@ -42,7 +42,6 @@ pub fn run() {
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                commands::stop_owned_flm_process();
                 let _ = window.hide();
                 api.prevent_close();
             }

@@ -16,8 +16,6 @@ pub struct TrayMenuParams {
     pub is_running: bool,
     pub selected_model: String,
     pub presets: Vec<TrayPreset>,
-    pub installed_models: Vec<String>,
-    pub available_models: Vec<String>,
     pub startable_models: Vec<String>,
     pub asr_enabled: bool,
     pub embed_enabled: bool,
@@ -42,9 +40,5 @@ pub struct TrayMenuTexts {
     pub embed: String,
     pub presets_group: String,
     pub models_group: String,
-    pub models_menu: String,
     pub no_models_available: String,
-    pub start_with_model: String,
-    pub delete_model: String,
-    pub download_model: String,
 }

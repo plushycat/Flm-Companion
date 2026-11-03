@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -153,6 +153,16 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setMessages([])}
+                        disabled={!messages.length || isThinking}
+                        aria-label={t('chat.clear')}
+                        title={t('chat.clear')}
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </Button>
                     <Button
                         variant="outline"
                         disabled
