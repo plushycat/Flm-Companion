@@ -41,8 +41,7 @@ jobs:
         with:
           files: |
             src/src-tauri/target/release/bundle/nsis/*.exe
-          #  src/src-tauri/target/release/flm-manager.exe
-          #  src/src-tauri/target/release/bundle/msi/*.exe
+            src/src-tauri/target/release/bundle/msi/*.msi
           draft: false
           prerelease: false
           generate_release_notes: true
