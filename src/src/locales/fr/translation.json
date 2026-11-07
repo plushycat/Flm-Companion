@@ -27,6 +27,8 @@
     "advanced_settings": "Paramètres Avancés",
     "power_mode": "Mode de puissance",
     "power_mode_desc": "Définit le profil de performance du serveur (économie d'énergie vs performance maximale).",
+    "sampling_preset": "Préréglage de réponse",
+    "sampling_preset_desc": "Définit le style de réponse et les valeurs par défaut de température et top-p pour les requêtes du proxy Companion.",
     "port": "Port",
     "port_desc": "Port d'écoute du serveur local (défaut: 52625).",
     "host": "Hôte",
@@ -194,6 +196,9 @@
   "chat": {
     "select_model": "Sélectionner un modèle",
     "settings": "Paramètres",
+    "sampling_precise": "Précis",
+    "sampling_balanced": "Équilibré",
+    "sampling_creative": "Créatif",
     "start_chat": "Démarrer le chat",
     "clear": "Effacer le chat",
     "stop": "Arrêter",

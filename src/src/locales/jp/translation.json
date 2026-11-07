@@ -27,6 +27,8 @@
     "advanced_settings": "詳細設定",
     "power_mode": "パワーモード",
     "power_mode_desc": "サーバーのパフォーマンスプロファイルを選択します",
+    "sampling_preset": "応答プリセット",
+    "sampling_preset_desc": "Companion API プロキシ経由のリクエストに使用する応答スタイル、temperature、top-p の既定値です。",
     "port": "ポート",
     "port_desc": "サーバーが待ち受けるポート番号です（デフォルト: 52625）",
     "host": "ホスト",
@@ -198,6 +200,9 @@
   "chat": {
     "select_model": "モデルを選択",
     "settings": "設定",
+    "sampling_precise": "正確",
+    "sampling_balanced": "バランス",
+    "sampling_creative": "クリエイティブ",
     "start_chat": "チャット開始",
     "clear": "チャットをクリア",
     "stop": "停止",

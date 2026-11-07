@@ -7,10 +7,14 @@ use std::sync::{
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 use std::sync::atomic::AtomicU32;
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use serde_json::{json, Value};
 
 const PROXY_PORT: u16 = 52626;
-const CAVEMAN_INSTRUCTION: &str = "Speak like caveman. Use terse fragments. Omit articles, filler, and pleasantries. Lead with answer. Preserve code, paths, commands, and errors exactly.";
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+const CAVEMAN_INSTRUCTION: &str = "Speak like caveman. Ultra-short. Omit filler words. Maximum information density with minimal tokens.";
 
 struct ProxyHandle {
     stop: Arc<AtomicBool>,
@@ -48,7 +52,7 @@ fn proxy_state() -> &'static Mutex<Option<ProxyHandle>> {
 }
 
 #[tauri::command]
-pub fn start_api_proxy(target_port: u16, model: String, caveman: bool) -> Result<u16, String> {
+pub fn start_api_proxy(target_port: u16, model: String, caveman: bool, temperature: f64, top_p: f64) -> Result<u16, String> {
     stop_api_proxy();
     metrics().requests.store(0, Ordering::Relaxed);
     metrics().ttft_ms.store(0, Ordering::Relaxed);
@@ -66,7 +70,7 @@ pub fn start_api_proxy(target_port: u16, model: String, caveman: bool) -> Result
             match listener.accept() {
                 Ok((stream, _)) => {
                     let model = Arc::clone(&active_model);
-                    thread::spawn(move || handle_connection(stream, target_port, &model, caveman));
+                    thread::spawn(move || handle_connection(stream, target_port, &model, caveman, temperature, top_p));
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                     thread::sleep(Duration::from_millis(50));
@@ -114,6 +118,7 @@ pub fn stop_owned_flm_process() {
 
     #[cfg(windows)]
     let _ = std::process::Command::new("taskkill")
+        .creation_flags(CREATE_NO_WINDOW)
         .args(["/PID", &pid.to_string(), "/T", "/F"])
         .output();
 
@@ -123,7 +128,7 @@ pub fn stop_owned_flm_process() {
         .output();
 }
 
-fn handle_connection(mut client: TcpStream, target_port: u16, model: &str, caveman: bool) {
+fn handle_connection(mut client: TcpStream, target_port: u16, model: &str, caveman: bool, temperature: f64, top_p: f64) {
     let _ = client.set_read_timeout(Some(Duration::from_secs(10)));
     let Ok((request_head, body)) = read_request(&mut client) else { return };
     let Some((method, path, headers)) = parse_request_head(&request_head) else { return };
@@ -147,8 +152,8 @@ fn handle_connection(mut client: TcpStream, target_port: u16, model: &str, cavem
         return;
     };
 
-    let body = if caveman && path == "/v1/chat/completions" {
-        add_caveman_prompt(body)
+    let body = if path.trim_end_matches('/') == "/v1/chat/completions" {
+        add_request_defaults(body, caveman, temperature, top_p)
     } else {
         body
     };
@@ -175,16 +180,21 @@ fn handle_connection(mut client: TcpStream, target_port: u16, model: &str, cavem
     let _ = client.shutdown(Shutdown::Both);
 }
 
-fn add_caveman_prompt(body: Vec<u8>) -> Vec<u8> {
+fn add_request_defaults(body: Vec<u8>, caveman: bool, temperature: f64, top_p: f64) -> Vec<u8> {
     let Ok(mut payload) = serde_json::from_slice::<Value>(&body) else { return body };
-    let Some(messages) = payload.get_mut("messages").and_then(Value::as_array_mut) else { return body };
-    if messages.iter().any(|message| {
-        message.get("role").and_then(Value::as_str) == Some("system")
-            && message.get("content").and_then(Value::as_str) == Some(CAVEMAN_INSTRUCTION)
-    }) {
-        return body;
+    let Some(object) = payload.as_object_mut() else { return body };
+    object.entry("temperature").or_insert_with(|| json!(temperature));
+    object.entry("top_p").or_insert_with(|| json!(top_p));
+    if caveman {
+        let Some(messages) = object.get_mut("messages").and_then(Value::as_array_mut) else { return body };
+        messages.retain(|message| {
+            let content = message.get("content").and_then(Value::as_str);
+            content != Some(CAVEMAN_INSTRUCTION)
+                && content != Some("Speak like caveman. Ultra-short. Omit filler words. Maximum information density with minimal tokens.")
+                && content != Some("Speak like caveman. Use terse fragments. Omit articles, filler, and pleasantries. Lead with answer. Preserve code, paths, commands, and errors exactly.")
+        });
+        messages.insert(0, json!({ "role": "system", "content": CAVEMAN_INSTRUCTION }));
     }
-    messages.insert(0, json!({ "role": "system", "content": CAVEMAN_INSTRUCTION }));
     serde_json::to_vec(&payload).unwrap_or(body)
 }
 

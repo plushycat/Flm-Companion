@@ -5,12 +5,11 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { FlmService } from '../../services/flm';
-import type { FlmModel, ServerStatus } from '../../types';
+import { RESPONSE_PRESETS, type FlmModel, type ResponsePreset, type ServerStatus } from '../../types';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { Card } from '../ui/card';
-import { Switch } from '../ui/switch';
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
@@ -25,8 +24,6 @@ interface ChatViewProps {
 }
 
 const API_BASE_URL = 'http://127.0.0.1:52626/v1';
-const CAVEMAN_INSTRUCTION = 'Speak like caveman. Use terse fragments. Omit articles, filler, and pleasantries. Lead with answer. Preserve code, paths, commands, and errors exactly.';
-
 export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }: ChatViewProps) => {
     const { t } = useTranslation();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -34,7 +31,10 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
     const [isRunning, setIsRunning] = useState(false);
     const [isReady, setIsReady] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
-    const [cavemanMode, setCavemanMode] = useState(false);
+    const [responsePreset, setResponsePreset] = useState<ResponsePreset>('balanced');
+    const systemPrompt = 'systemPrompt' in RESPONSE_PRESETS[responsePreset]
+        ? RESPONSE_PRESETS[responsePreset].systemPrompt
+        : undefined;
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -75,14 +75,20 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
         try {
             if (serverStatus === 'running') {
                 const history = [
-                    ...(cavemanMode ? [{ role: 'system' as const, content: CAVEMAN_INSTRUCTION }] : []),
+                    ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
                     ...messages.filter(message => message.role !== 'system'),
                     { role: 'user' as const, content: userMsg },
                 ];
                 const response = await fetch(`${API_BASE_URL}/chat/completions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: selectedModel, messages: history, stream: true }),
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        messages: history,
+                        temperature: RESPONSE_PRESETS[responsePreset].temperature,
+                        top_p: RESPONSE_PRESETS[responsePreset].topP,
+                        stream: true,
+                    }),
                 });
                 if (!response.ok || !response.body) throw new Error(`API request failed (${response.status})`);
 
@@ -146,10 +152,17 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
                         </SelectContent>
                     </Select>
 
-                    <label className="flex items-center gap-2 text-sm text-muted-foreground whitespace-nowrap">
-                        <Switch checked={cavemanMode} onCheckedChange={setCavemanMode} />
-                        {t('chat.caveman_mode')}
-                    </label>
+                    <Select value={responsePreset} onValueChange={(value) => setResponsePreset(value as ResponsePreset)}>
+                        <SelectTrigger className="w-[130px]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="precise">{t('chat.sampling_precise')}</SelectItem>
+                            <SelectItem value="balanced">{t('chat.sampling_balanced')}</SelectItem>
+                            <SelectItem value="creative">{t('chat.sampling_creative')}</SelectItem>
+                            <SelectItem value="caveman">{t('chat.caveman_mode')}</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <div className="flex items-center gap-2">

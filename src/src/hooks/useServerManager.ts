@@ -40,6 +40,7 @@ export function useServerManager({
     const [serverOptions, setServerOptions] = useState<ServerOptions>({
         ...DEFAULT_SERVER_OPTIONS,
         ...initialServerOptions,
+        ...(initialServerOptions.caveman && !initialServerOptions.responsePreset ? { responsePreset: "caveman" } : {}),
     });
     const [pendingRestart, setPendingRestart] = useState<ServerOptions | null>(null);
 
@@ -78,6 +79,7 @@ export function useServerManager({
             setServerOptions((prev) => ({
                 ...prev,
                 ...initialServerOptions,
+                ...(initialServerOptions.caveman && !initialServerOptions.responsePreset ? { responsePreset: "caveman" } : {}),
             }));
         }
     }, [isConfigLoaded, initialServerOptions]);

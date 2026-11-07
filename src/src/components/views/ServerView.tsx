@@ -32,7 +32,7 @@ interface ApiMetrics {
 function formatTokenCount(value: number): string {
     return value >= 1024 ? `${value / 1024}k` : `${value}`;
 }
-import type { FlmModel, ServerOptions, ServerStatus, PerformanceMode } from "../../types";
+import { RESPONSE_PRESETS, type FlmModel, type ResponsePreset, type ServerOptions, type ServerStatus, type PerformanceMode } from "../../types";
 import { toast } from "sonner";
 
 interface ServerViewProps {
@@ -480,6 +480,28 @@ export const ServerView = ({
                                                     </Select>
                                                 </div>
 
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1.5">
+                                                        <label className="block text-xs font-medium text-muted-foreground">{t('server.sampling_preset')}</label>
+                                                        <InfoTooltip text={t('server.sampling_preset_desc')} />
+                                                    </div>
+                                                    <Select
+                                                        value={options.responsePreset || (options.caveman ? "caveman" : "balanced")}
+                                                        onValueChange={(value) => handleOptionChange('responsePreset', value as ResponsePreset)}
+                                                        disabled={serverStatus !== "stopped"}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="precise">{t('chat.sampling_precise')} ({RESPONSE_PRESETS.precise.temperature}/{RESPONSE_PRESETS.precise.topP})</SelectItem>
+                                                            <SelectItem value="balanced">{t('chat.sampling_balanced')} ({RESPONSE_PRESETS.balanced.temperature}/{RESPONSE_PRESETS.balanced.topP})</SelectItem>
+                                                            <SelectItem value="creative">{t('chat.sampling_creative')} ({RESPONSE_PRESETS.creative.temperature}/{RESPONSE_PRESETS.creative.topP})</SelectItem>
+                                                            <SelectItem value="caveman">{t('chat.caveman_mode')} ({RESPONSE_PRESETS.caveman.temperature}/{RESPONSE_PRESETS.caveman.topP})</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
                                                         <div className="flex items-center gap-2 mb-1.5">
@@ -681,17 +703,6 @@ export const ServerView = ({
                                                         <Switch
                                                             checked={options.preemption}
                                                             onCheckedChange={(checked) => handleOptionChange('preemption', checked)}
-                                                            disabled={serverStatus !== "stopped"}
-                                                        />
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-sm text-foreground">{t('chat.caveman_mode')}</span>
-                                                            <InfoTooltip text={t('chat.caveman_mode')} />
-                                                        </div>
-                                                        <Switch
-                                                            checked={options.caveman}
-                                                            onCheckedChange={(checked) => handleOptionChange('caveman', checked)}
                                                             disabled={serverStatus !== "stopped"}
                                                         />
                                                     </div>

@@ -5,6 +5,18 @@ export type Theme = "dark" | "light" | "system";
 export type ServerStatus = "stopped" | "running" | "starting";
 
 export type PerformanceMode = "powersaver" | "balanced" | "performance" | "turbo";
+export type ResponsePreset = "precise" | "balanced" | "creative" | "caveman";
+
+export const RESPONSE_PRESETS = {
+    precise: { temperature: 0.2, topP: 0.8 },
+    balanced: { temperature: 0.7, topP: 0.9 },
+    creative: { temperature: 1.0, topP: 0.95 },
+    caveman: {
+        temperature: 1.0,
+        topP: 1.0,
+        systemPrompt: "Speak like caveman. Ultra-short. Omit filler words. Maximum information density with minimal tokens.",
+    },
+} as const;
 
 export interface ServerOptions {
     pmode?: PerformanceMode;
@@ -21,6 +33,7 @@ export interface ServerOptions {
     asr?: boolean;
     embed?: boolean;
     caveman?: boolean;
+    responsePreset?: ResponsePreset;
     socket?: number;
     qLen?: number;
     cors?: boolean;
@@ -109,6 +122,7 @@ export const DEFAULT_SERVER_OPTIONS: ServerOptions = {
     asr: false,
     embed: false,
     caveman: false,
+    responsePreset: "balanced",
     socket: 10,
     qLen: 10,
     cors: true,

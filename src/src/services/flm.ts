@@ -2,8 +2,7 @@ import { Command, Child, TerminatedPayload } from "@tauri-apps/plugin-shell";
 import { invoke } from "@tauri-apps/api/core";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { ConfigService } from "./config";
-import type { FlmModel, FlmStatus, HardwareInfo, ServerOptions } from "../types";
-import { MODEL_LIST_FILENAME } from "../types";
+import { RESPONSE_PRESETS, MODEL_LIST_FILENAME, type FlmModel, type FlmStatus, type HardwareInfo, type ServerOptions } from "../types";
 
 // Re-export types for compatibility
 export type { FlmModel, FlmStatus, HardwareInfo, ServerOptions };
@@ -411,7 +410,9 @@ export const FlmService = {
             await invoke("start_api_proxy", {
                 targetPort: options.port || 52625,
                 model: modelName,
-                caveman: options.caveman ?? false,
+                caveman: (options.responsePreset || (options.caveman ? "caveman" : "balanced")) === "caveman",
+                temperature: RESPONSE_PRESETS[options.responsePreset || (options.caveman ? "caveman" : "balanced")].temperature,
+                topP: RESPONSE_PRESETS[options.responsePreset || (options.caveman ? "caveman" : "balanced")].topP,
             });
             onLog(`[SYSTEM] Server process started (PID: ${serverProcess.pid})`);
 
