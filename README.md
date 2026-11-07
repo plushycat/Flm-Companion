@@ -104,9 +104,13 @@ Frontend state flows through `AppContext`. FLM process and model operations live
 
 ## Screens
 
-![Application interface](screen/demo_interface.gif)
+![Chat](screen/flm-companion_cyo2aBDbHc.png)
 
-![System tray](screen/demo_notif.gif)
+![Inference server](screen/flm-companion_ThNOqdv700.png)
+
+![Model management](screen/flm-companion_BuhwRhmPtt.png)
+
+![System tray](screen/explorer_q6AkawqYEO.png)
 
 ## Links
 
