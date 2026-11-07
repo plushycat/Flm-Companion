@@ -18,6 +18,7 @@ import { getAllPresets, isPresetId, findPresetById, getPresetDisplayName } from 
 import { ServerPreset } from "../../types";
 import { useAppContext } from "../../contexts";
 import { SystemService } from "../../services/system";
+import { FlmService } from "../../services/flm";
 
 const CONTEXT_LENGTHS = [512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144];
 const PREFILL_LENGTHS = [512, 1024, 2048, 4096, 8192, 16384, 32768];
@@ -64,6 +65,17 @@ export const ServerView = ({
     const [managePresetsDialogOpen, setManagePresetsDialogOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [liveRam, setLiveRam] = useState({ used: 0, total: 0, percentage: 0, flmProcess: 0 });
+    const [supportedBackends, setSupportedBackends] = useState<string[]>([]);
+
+    useEffect(() => {
+        let active = true;
+        FlmService.getSupportedBackends().then((backends) => {
+            if (active) setSupportedBackends(backends);
+        });
+        return () => {
+            active = false;
+        };
+    }, []);
 
     useEffect(() => {
         if (serverStatus === "running" || serverStatus === "starting") return;
@@ -132,6 +144,9 @@ export const ServerView = ({
     const apiModel = isPresetId(selectedModel)
         ? findPresetById(selectedModel, presetsConfig)?.model || selectedModel
         : selectedModel;
+    const backendOptions = options.backend && !supportedBackends.includes(options.backend)
+        ? [options.backend, ...supportedBackends]
+        : supportedBackends;
     const apiSnippets = {
         baseUrl: apiBaseUrl,
         curl: `curl ${apiBaseUrl}/chat/completions -H "Content-Type: application/json" -d '{"model":"${apiModel}","messages":[{"role":"user","content":"Hello"}]}'`,
@@ -596,16 +611,16 @@ export const ServerView = ({
                                                             <InfoTooltip text={t('server.backend_desc')} />
                                                         </div>
                                                         <Select
-                                                            value={options.backend || "auto"}
-                                                            onValueChange={(value) => handleOptionChange('backend', value === "auto" ? "" : value)}
-                                                            disabled={serverStatus !== "stopped"}
+                                                            value={options.backend || "__auto__"}
+                                                            onValueChange={(value) => handleOptionChange('backend', value === "__auto__" ? "" : value)}
+                                                            disabled={serverStatus !== "stopped" || supportedBackends.length === 0}
                                                         >
                                                             <SelectTrigger className="bg-input border-input text-foreground h-9"><SelectValue /></SelectTrigger>
                                                             <SelectContent>
-                                                                <SelectItem value="auto">{t('server.backend_auto')}</SelectItem>
-                                                                <SelectItem value="flm">flm</SelectItem>
-                                                                <SelectItem value="core">core</SelectItem>
-                                                                <SelectItem value="flm_npu">flm_npu</SelectItem>
+                                                                <SelectItem value="__auto__">{t('server.backend_auto')}</SelectItem>
+                                                                {backendOptions.map((backend) => (
+                                                                    <SelectItem key={backend} value={backend}>{backend}</SelectItem>
+                                                                ))}
                                                             </SelectContent>
                                                         </Select>
                                                     </div>

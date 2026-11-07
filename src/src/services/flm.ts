@@ -72,6 +72,20 @@ function getDirectory(path: string): string {
 }
 
 export const FlmService = {
+    async getSupportedBackends(): Promise<string[]> {
+        try {
+            const output = await Command.create("flm", ["serve", "--help"]).execute();
+            const help = `${output.stdout}\n${output.stderr}`;
+            const backends = new Set<string>();
+            const examples = /^\s*flm\s+(?:run|serve)\b.*--backend\s+([a-z][a-z0-9_-]*)/gim;
+            for (const match of help.matchAll(examples)) backends.add(match[1]);
+            return [...backends];
+        } catch (error) {
+            console.error("Failed to discover FLM backends:", error);
+            return [];
+        }
+    },
+
     /**
      * Get rich metadata from local JSON file
      */
@@ -350,7 +364,7 @@ export const FlmService = {
 
             if (options.pmode) args.push("--pmode", options.pmode);
             if (options.ctxLen && options.ctxLen > 0) args.push("--ctx-len", options.ctxLen.toString());
-            if (options.backend) args.push("--backend", options.backend);
+            if (options.backend && options.backend !== "auto") args.push("--backend", options.backend);
             if (options.decision) args.push("--decision", options.decision);
             if (options.prefillChunkLen && options.prefillChunkLen > 0) args.push("--prefill-chunk-len", options.prefillChunkLen.toString());
             if (options.prefixCacheMb !== undefined) args.push("--prefix-cache-mb", options.prefixCacheMb.toString());
