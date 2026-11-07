@@ -24,7 +24,6 @@ This fork turns FLM into a practical local model workstation: launch models, man
 - Optional Caveman mode for short, dense chat replies.
 
 ## Requirements
-
 - Windows.
 - [FastFlowLM](https://github.com/FastFlowLM/FastFlowLM) `0.9.37` or newer.
 - Current AMD NPU driver supported by FLM.
