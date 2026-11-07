@@ -107,14 +107,17 @@ export const ServerView = ({
         setOptions(prev => ({ ...prev, [key]: value }));
     };
 
-    const selectedModelInfo = models.find(model => model.name === selectedModel);
+    const selectedModelName = isPresetId(selectedModel)
+        ? findPresetById(selectedModel, presetsConfig)?.model
+        : selectedModel;
+    const selectedModelInfo = models.find(model => model.name === selectedModelName);
     const maxContextLength = selectedModelInfo?.maxContextLength || selectedModelInfo?.contextLength || 32768;
     const contextChoices = CONTEXT_LENGTHS.filter(length => length <= maxContextLength);
-    const prefillChoices = PREFILL_LENGTHS.filter(length => length <= maxContextLength);
+    const defaultPrefillLength = selectedModelInfo?.maxPrefillLength || 4096;
+    const prefillChoices = PREFILL_LENGTHS.filter(length => length <= defaultPrefillLength);
     const contextValue = contextChoices.includes(options.ctxLen || 0)
         ? options.ctxLen!
         : selectedModelInfo?.contextLength || contextChoices[contextChoices.length - 1];
-    const defaultPrefillLength = selectedModelInfo?.maxPrefillLength || 4096;
     const modelLoadBytes = selectedModelInfo?.realSize || 0;
     const defaultContext = selectedModelInfo?.contextLength || 32768;
     const contextReserveBytes = modelLoadBytes
@@ -147,7 +150,9 @@ export const ServerView = ({
             try {
                 const metrics = await invoke<ApiMetrics>("get_api_metrics");
                 if (active) setApiMetrics(metrics);
-            } catch { }
+            } catch {
+                // Metrics unavailable while server is stopped.
+            }
         };
         refreshMetrics();
         const interval = window.setInterval(refreshMetrics, 1000);
@@ -372,7 +377,7 @@ export const ServerView = ({
                                     <div className="border-t border-border pt-2 text-xs leading-4">
                                         <div className="flex items-center justify-between">
                                             <span className="flex items-center gap-1 text-muted-foreground">
-                                                {t('server.estimated_ram')}
+                                                ~{t('server.estimated_ram')}
                                                 <InfoTooltip text={t('server.load_estimate_desc')} />
                                             </span>
                                             <span className="font-mono text-foreground">{estimatedRamBytes ? formatGb(estimatedRamBytes) : "—"}</span>

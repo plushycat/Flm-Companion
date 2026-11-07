@@ -12,6 +12,8 @@ export interface UpdateCallbacks {
     onError?: (error: string) => void;
 }
 
+const INSTALLER_SUCCESS_CODES = new Set([0, 1641, 3010]);
+
 export const UpdateService = {
     /**
      * Télécharge et installe une release (FLM ou Companion)
@@ -102,12 +104,12 @@ export const UpdateService = {
                 '-WindowStyle',
                 'Hidden',
                 '-Command',
-                '$installer = $args[0]; $isMsi = $args[1] -eq "1"; if ($isMsi) { $p = Start-Process -FilePath "msiexec.exe" -ArgumentList @("/i", $installer) -Wait -PassThru } else { $p = Start-Process -FilePath $installer -Wait -PassThru }; exit $p.ExitCode',
+                '$installer = $args[0]; $isMsi = $args[1] -eq "1"; if ($isMsi) { $quotedInstaller = ("{0}{1}{0}" -f [char]34, $installer); $p = Start-Process -FilePath "msiexec.exe" -ArgumentList @("/i", $quotedInstaller) -Wait -PassThru } else { $p = Start-Process -FilePath $installer -Wait -PassThru }; exit $p.ExitCode',
                 absolutePath,
                 isMsi ? '1' : '0',
             ]);
             const result = await installer.execute();
-            if (result.code !== 0) {
+            if (!INSTALLER_SUCCESS_CODES.has(result.code ?? -1)) {
                 throw new Error(`Installer exited with code ${result.code}`);
             }
 

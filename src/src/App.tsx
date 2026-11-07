@@ -13,14 +13,18 @@ import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "sonner";
 import { FlmInstallDialog } from "./components/dialogs/FlmInstallDialog";
 import { UpdateAvailableDialog } from "./components/dialogs/UpdateAvailableDialog";
+import { findPresetById, isPresetId } from "./lib/presets";
 
 // Wrappers
 function ChatViewWrapper() {
-  const { runnableModels, selectedModel, setSelectedModel, serverStatus } = useAppContext();
+  const { runnableModels, selectedModel, setSelectedModel, serverStatus, presetsConfig } = useAppContext();
+  const activeModel = isPresetId(selectedModel)
+    ? findPresetById(selectedModel, presetsConfig)?.model || selectedModel
+    : selectedModel;
   return (
     <ChatView
       models={runnableModels}
-      selectedModel={selectedModel}
+      selectedModel={activeModel}
       onSelectModel={setSelectedModel}
       serverStatus={serverStatus}
     />

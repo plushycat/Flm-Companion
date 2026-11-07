@@ -31,19 +31,8 @@ interface ModelJsonEntry {
     };
 }
 
-function getModelMaxContextLength(modelName: string, defaultLength: number, declaredMax?: number): number {
-    if (declaredMax) return declaredMax;
-
-    const name = modelName.toLowerCase();
-    if (name.includes("-flash")) return 1024;
-    if (name.startsWith("nanbeige") || name.startsWith("minicpm-v-4.7")) return 262144;
-    if (name.startsWith("nemotron3.5-bolt")) return 65536;
-    if (name.startsWith("lfm3")) return 32768;
-    if (name.startsWith("llama3") || name.startsWith("phi4-mini-it") || name.startsWith("gpt-oss")) return 131072;
-    if (name.startsWith("gemma3") || name.startsWith("gemma4") || name.startsWith("medgemma") || name.startsWith("translategemma")) return 131072;
-    if (name.startsWith("qwen3-tk")) return 262144;
-    if (name.startsWith("d3:")) return 32768;
-    return defaultLength;
+function getModelMaxContextLength(defaultLength: number, declaredMax?: number): number {
+    return declaredMax && declaredMax > 0 ? declaredMax : defaultLength;
 }
 
 let serverProcess: Child | null = null;
@@ -156,7 +145,7 @@ export const FlmService = {
                                 isEmbed: fullName.toLowerCase().includes("embed"),
                                 isAudio: fullName.toLowerCase().includes("whisper"),
                                 contextLength: details.default_context_length,
-                                maxContextLength: getModelMaxContextLength(fullName, details.default_context_length, details.max_context_length),
+                                maxContextLength: getModelMaxContextLength(details.default_context_length, details.max_context_length),
                                 maxPrefillLength: details.max_prefill_len,
                                 quantization: details.details.quantization_level,
                                 url: details.url,
@@ -405,8 +394,9 @@ export const FlmService = {
                 onLog(`[FLM ERR] ${line}`);
             });
 
-            serverProcess = await command.spawn();
-            await invoke("register_flm_process", { pid: serverProcess.pid });
+            const process = await command.spawn();
+            serverProcess = process;
+            await invoke("register_flm_process", { pid: process.pid });
             await invoke("start_api_proxy", {
                 targetPort: options.port || 52625,
                 model: modelName,
@@ -414,10 +404,15 @@ export const FlmService = {
                 temperature: RESPONSE_PRESETS[options.responsePreset || (options.caveman ? "caveman" : "balanced")].temperature,
                 topP: RESPONSE_PRESETS[options.responsePreset || (options.caveman ? "caveman" : "balanced")].topP,
             });
-            onLog(`[SYSTEM] Server process started (PID: ${serverProcess.pid})`);
+            onLog(`[SYSTEM] Server process started (PID: ${process.pid})`);
 
         } catch (error) {
             console.error("Failed to start server:", error);
+            await invoke("stop_api_proxy").catch(() => undefined);
+            await invoke("stop_owned_flm_process").catch(() => undefined);
+            const process = serverProcess;
+            serverProcess = null;
+            await process?.kill().catch(() => undefined);
             throw error;
         }
     },
@@ -428,10 +423,12 @@ export const FlmService = {
     async stopServer(onLog?: (log: string) => void): Promise<void> {
         await invoke("stop_api_proxy");
         await invoke("stop_owned_flm_process");
-        if (serverProcess) {
+        const process = serverProcess;
+        serverProcess = null;
+        if (process) {
             try {
                 if (onLog) onLog("[SYSTEM] Stopping server...");
-                await serverProcess.kill();
+                await process.kill();
             } catch (e) {
                 console.error("Error stopping server process:", e);
                 if (onLog) onLog(`[ERROR] Failed to stop server: ${e}`);

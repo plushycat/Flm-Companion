@@ -189,6 +189,7 @@ export function AppProvider({ children }: AppProviderProps) {
         setSelectedModel: models.setSelectedModel,
         installedModels: models.runnableModels,
         initialServerOptions,
+        presetsConfig,
         isConfigLoaded: config.isConfigLoaded,
         onNavigateToLogs: () => setActiveTab("server"),
     });

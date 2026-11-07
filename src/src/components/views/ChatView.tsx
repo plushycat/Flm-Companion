@@ -108,7 +108,9 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
                         try {
                             const content = JSON.parse(payload).choices?.[0]?.delta?.content;
                             if (content) setMessages(prev => [...prev.slice(0, -1), { role: 'assistant', content: (prev[prev.length - 1]?.content || '') + content }]);
-                        } catch { }
+                        } catch {
+                            // Ignore malformed SSE chunks.
+                        }
                     }
                 }
                 setIsReady(true);

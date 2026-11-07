@@ -3,8 +3,8 @@ import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
 import { FlmService } from "../services/flm";
 import { NotificationService } from "../services/notification";
-import type { ServerStatus, ServerOptions, FlmModel } from "../types";
-import { DEFAULT_SERVER_OPTIONS, DEFAULT_PRESETS_CONFIG } from "../types";
+import type { ServerStatus, ServerOptions, FlmModel, PresetsConfig } from "../types";
+import { DEFAULT_SERVER_OPTIONS } from "../types";
 import { isPresetId, findPresetById } from "../lib/presets";
 
 interface UseServerManagerProps {
@@ -12,6 +12,7 @@ interface UseServerManagerProps {
     setSelectedModel: (model: string) => void;
     installedModels: FlmModel[];
     initialServerOptions: ServerOptions;
+    presetsConfig: PresetsConfig;
     isConfigLoaded: boolean;
     onNavigateToLogs?: () => void;
 }
@@ -31,6 +32,7 @@ export function useServerManager({
     setSelectedModel,
     installedModels,
     initialServerOptions,
+    presetsConfig,
     isConfigLoaded,
     onNavigateToLogs,
 }: UseServerManagerProps): UseServerManagerReturn {
@@ -90,7 +92,10 @@ export function useServerManager({
             setServerOptions((prev) => {
                 // If context length is 0 (default/unset), try to get it from the model
                 if (!prev.ctxLen) {
-                    const model = installedModels.find((m) => m.name === selectedModel);
+                    const modelName = isPresetId(selectedModel)
+                        ? findPresetById(selectedModel, presetsConfig)?.model
+                        : selectedModel;
+                    const model = installedModels.find((m) => m.name === modelName);
                     if (model?.contextLength) {
                         return { ...prev, ctxLen: model.contextLength };
                     }
@@ -98,7 +103,7 @@ export function useServerManager({
                 return prev;
             });
         }
-    }, [isConfigLoaded, installedModels, selectedModel]);
+    }, [isConfigLoaded, installedModels, selectedModel, presetsConfig]);
 
     const addLog = useCallback((log: string) => {
         setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${log}`]);
@@ -125,7 +130,7 @@ export function useServerManager({
                 // Get actual model name (extract from preset if needed)
                 let actualModel = selectedModelRef.current;
                 if (isPresetId(actualModel)) {
-                    const preset = findPresetById(actualModel, DEFAULT_PRESETS_CONFIG);
+                    const preset = findPresetById(actualModel, presetsConfig);
                     actualModel = preset?.model || "";
                 }
 
@@ -179,7 +184,7 @@ export function useServerManager({
                 }
             }
         },
-        [addLog, t]
+        [addLog, t, presetsConfig]
     );
 
     // Handle pending restart after server stops
@@ -216,7 +221,7 @@ export function useServerManager({
 
             if (isPresetId(newSelection)) {
                 // It's a preset - apply preset options
-                const preset = findPresetById(newSelection, DEFAULT_PRESETS_CONFIG);
+                const preset = findPresetById(newSelection, presetsConfig);
                 if (preset) {
                     newOptions = { ...serverOptionsRef.current, ...preset.options };
                 } else {
@@ -275,7 +280,7 @@ export function useServerManager({
             unlistenToggleAsr.then((f) => f());
             unlistenToggleEmbed.then((f) => f());
         };
-    }, [handleToggleServer, setSelectedModel, addLog, onNavigateToLogs]);
+    }, [handleToggleServer, setSelectedModel, addLog, onNavigateToLogs, presetsConfig]);
 
     return {
         serverStatus,
