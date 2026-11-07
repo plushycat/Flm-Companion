@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Square, Trash2 } from 'lucide-react';
+import { Brain, Send, Square, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { FlmService } from '../../services/flm';
@@ -251,9 +251,15 @@ export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
                                     {msg.role === 'assistant' ? (
                                         <>
                                             {msg.reasoning && (
-                                                <details className="mb-3 text-xs text-muted-foreground" open={isThinking && idx === messages.length - 1}>
-                                                    <summary className="cursor-pointer select-none font-medium">Thinking</summary>
-                                                    <div className="mt-2 border-l-2 border-border pl-3 whitespace-pre-wrap opacity-80">
+                                                <details
+                                                    className="mb-3 overflow-hidden rounded-md border border-border/60 bg-background/30 text-xs text-muted-foreground"
+                                                    open={isThinking && idx === messages.length - 1}
+                                                >
+                                                    <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 font-medium hover:text-foreground">
+                                                        <Brain className="h-3.5 w-3.5" />
+                                                        <span>{isThinking && idx === messages.length - 1 ? 'Thinking…' : 'Thought process'}</span>
+                                                    </summary>
+                                                    <div className="border-t border-border/60 px-3 py-2 whitespace-pre-wrap leading-relaxed opacity-75">
                                                         {msg.reasoning}
                                                     </div>
                                                 </details>
