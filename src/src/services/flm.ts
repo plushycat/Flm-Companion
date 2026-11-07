@@ -408,7 +408,11 @@ export const FlmService = {
 
             serverProcess = await command.spawn();
             await invoke("register_flm_process", { pid: serverProcess.pid });
-            await invoke("start_api_proxy", { targetPort: options.port || 52625, model: modelName });
+            await invoke("start_api_proxy", {
+                targetPort: options.port || 52625,
+                model: modelName,
+                caveman: options.caveman ?? false,
+            });
             onLog(`[SYSTEM] Server process started (PID: ${serverProcess.pid})`);
 
         } catch (error) {

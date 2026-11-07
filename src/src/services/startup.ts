@@ -3,7 +3,7 @@ import { GithubService, ReleaseInfo } from './github';
 import { ConfigService } from './config';
 
 // Minimum FLM version required for the application to work
-export const MINIMUM_FLM_VERSION = import.meta.env.VITE_MINIMUM_FLM_VERSION || '1.0.0';
+export const MINIMUM_FLM_VERSION = import.meta.env.VITE_MINIMUM_FLM_VERSION || '0.9.37';
 
 const APP_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_COMPANION || "plushycat/Flm-Companion";
 const FLM_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_FLM || "FastFlowLM/FastFlowLM";

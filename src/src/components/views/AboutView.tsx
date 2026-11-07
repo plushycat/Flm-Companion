@@ -20,7 +20,7 @@ const APP_REPO_URL = `https://github.com/${APP_REPO_NAME}`;
 const FLM_REPO_URL = `https://github.com/${FLM_REPO_NAME}`;
 const AMD_URL = import.meta.env.VITE_AMD_URL ?? 'https://ryzenai.docs.amd.com/en/latest/inst.html#install-npu-drivers';
 const COMPANION_EXE_NAME = import.meta.env.VITE_COMPANION_EXE || "flm-manager.exe";
-const FLM_EXE_NAME = import.meta.env.VITE_FLM_EXE || "flm-setup.exe";
+const FLM_EXE_NAME = import.meta.env.VITE_FLM_EXE || "flm-setup.msi";
 
 interface AboutViewProps {
     hardwareInfo: HardwareInfo | null;

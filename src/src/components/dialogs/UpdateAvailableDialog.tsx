@@ -16,7 +16,7 @@ const APP_REPO_URL = `https://github.com/${APP_REPO_NAME}`;
 const FLM_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_FLM || "FastFlowLM/FastFlowLM";
 const FLM_REPO_URL = `https://github.com/${FLM_REPO_NAME}`;
 const COMPANION_EXE_NAME = import.meta.env.VITE_COMPANION_EXE || "flm-manager.exe";
-const FLM_EXE_NAME = import.meta.env.VITE_FLM_EXE || "flm-setup.exe";
+const FLM_EXE_NAME = import.meta.env.VITE_FLM_EXE || "flm-setup.msi";
 
 interface UpdateAvailableDialogProps {
     open: boolean;

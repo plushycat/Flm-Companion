@@ -20,6 +20,7 @@ export interface ServerOptions {
     host?: string;
     asr?: boolean;
     embed?: boolean;
+    caveman?: boolean;
     socket?: number;
     qLen?: number;
     cors?: boolean;
@@ -107,6 +108,7 @@ export const DEFAULT_SERVER_OPTIONS: ServerOptions = {
     imgPreResize: 2,
     asr: false,
     embed: false,
+    caveman: false,
     socket: 10,
     qLen: 10,
     cors: true,

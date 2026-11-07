@@ -684,6 +684,17 @@ export const ServerView = ({
                                                             disabled={serverStatus !== "stopped"}
                                                         />
                                                     </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-sm text-foreground">{t('chat.caveman_mode')}</span>
+                                                            <InfoTooltip text={t('chat.caveman_mode')} />
+                                                        </div>
+                                                        <Switch
+                                                            checked={options.caveman}
+                                                            onCheckedChange={(checked) => handleOptionChange('caveman', checked)}
+                                                            disabled={serverStatus !== "stopped"}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </CardContent>
                                         </AccordionContent>

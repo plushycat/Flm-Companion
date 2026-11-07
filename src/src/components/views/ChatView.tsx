@@ -25,7 +25,7 @@ interface ChatViewProps {
 }
 
 const API_BASE_URL = 'http://127.0.0.1:52626/v1';
-const CAVEMAN_INSTRUCTION = 'Speak like caveman. Ultra-short. Omit filler words. Maximum information density with minimal tokens.';
+const CAVEMAN_INSTRUCTION = 'Speak like caveman. Use terse fragments. Omit articles, filler, and pleasantries. Lead with answer. Preserve code, paths, commands, and errors exactly.';
 
 export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }: ChatViewProps) => {
     const { t } = useTranslation();
