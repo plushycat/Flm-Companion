@@ -15,7 +15,6 @@ This fork turns FLM into a practical local model workstation: launch models, man
 - Companion-owned API proxy at `127.0.0.1:52626` that exposes only the active model through `/v1/models`.
 - Accurate installed/download model sizes.
 - Live RAM, FLM process RAM, NPU usage, launch context, and TTFT visibility.
-- Presets for repeatable server launches.
 - System-tray controls for server state, installed model selection, presets, logs, and features.
 - FLM process cleanup on stop, restart, application quit, and server failure.
 - Persistent selected model and launch settings.
