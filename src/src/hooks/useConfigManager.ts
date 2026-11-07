@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ConfigService } from "../services/config";
 import { FlmService } from "../services/flm";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { Theme, AppConfig, ServerOptions } from "../types";
+import type { Theme, AppConfig, ServerOptions, ResponsePreset } from "../types";
 import { DEFAULT_APP_CONFIG } from "../types";
 
 interface UseConfigManagerReturn {
@@ -13,6 +13,8 @@ interface UseConfigManagerReturn {
     flmPath: string;
     setFlmPath: (path: string) => void;
     isConfigLoaded: boolean;
+    chatResponsePreset: ResponsePreset;
+    setChatResponsePreset: (preset: ResponsePreset) => void;
     saveExternalConfig: (selectedModel: string, serverOptions: ServerOptions) => void;
 }
 
@@ -21,6 +23,7 @@ export function useConfigManager(): UseConfigManagerReturn {
     const [startMinimized, setStartMinimized] = useState<boolean>(DEFAULT_APP_CONFIG.startMinimized);
     const [flmPath, setFlmPath] = useState<string>(DEFAULT_APP_CONFIG.flmPath);
     const [isConfigLoaded, setIsConfigLoaded] = useState<boolean>(false);
+    const [chatResponsePreset, setChatResponsePreset] = useState<ResponsePreset>(DEFAULT_APP_CONFIG.chatResponsePreset);
 
     const [externalSelectedModel, setExternalSelectedModel] = useState<string>("");
     const [externalServerOptions, setExternalServerOptions] = useState<ServerOptions>({});
@@ -50,6 +53,7 @@ export function useConfigManager(): UseConfigManagerReturn {
             setFlmPath(path);
             setExternalSelectedModel(config.lastSelectedModel || "");
             setExternalServerOptions(config.serverOptions || {});
+            setChatResponsePreset(config.chatResponsePreset || DEFAULT_APP_CONFIG.chatResponsePreset);
             setIsConfigLoaded(true);
         });
     }, []);
@@ -84,6 +88,7 @@ export function useConfigManager(): UseConfigManagerReturn {
                 flmPath,
                 lastSelectedModel: externalSelectedModel,
                 serverOptions: externalServerOptions,
+                chatResponsePreset,
                 presetsConfig: currentConfig.presetsConfig, // Preserve presets
             };
             await ConfigService.saveConfig(config);
@@ -91,7 +96,7 @@ export function useConfigManager(): UseConfigManagerReturn {
 
         const timeoutId = setTimeout(saveSettings, 500);
         return () => clearTimeout(timeoutId);
-    }, [theme, startMinimized, flmPath, externalSelectedModel, externalServerOptions, isConfigLoaded]);
+    }, [theme, startMinimized, flmPath, externalSelectedModel, externalServerOptions, chatResponsePreset, isConfigLoaded]);
 
     const saveExternalConfig = useCallback((selectedModel: string, serverOptions: ServerOptions) => {
         setExternalSelectedModel(selectedModel);
@@ -106,6 +111,8 @@ export function useConfigManager(): UseConfigManagerReturn {
         flmPath,
         setFlmPath,
         isConfigLoaded,
+        chatResponsePreset,
+        setChatResponsePreset,
         saveExternalConfig,
     };
 }

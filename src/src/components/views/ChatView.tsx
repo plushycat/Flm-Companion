@@ -1,43 +1,55 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Trash2 } from 'lucide-react';
+import { Send, Square, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { FlmService } from '../../services/flm';
-import { RESPONSE_PRESETS, type FlmModel, type ResponsePreset, type ServerStatus } from '../../types';
+import { RESPONSE_PRESETS, type ServerStatus } from '../../types';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../../lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { Card } from '../ui/card';
+import { useAppContext } from '../../contexts';
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
+    reasoning?: string;
+}
+
+function splitReasoning(text: string, reasoning = '') {
+    const start = text.indexOf('<think>');
+    if (start === -1) return { reasoning, content: text };
+    const bodyStart = start + '<think>'.length;
+    const end = text.indexOf('</think>', bodyStart);
+    if (end === -1) return { reasoning: reasoning + text.slice(bodyStart), content: '' };
+    return {
+        reasoning: reasoning + text.slice(bodyStart, end),
+        content: text.slice(end + '</think>'.length).trimStart(),
+    };
 }
 
 interface ChatViewProps {
-    models: FlmModel[];
     selectedModel: string;
-    onSelectModel: (model: string) => void;
     serverStatus: ServerStatus;
 }
 
 const API_BASE_URL = 'http://127.0.0.1:52626/v1';
-export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }: ChatViewProps) => {
+export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
     const { t } = useTranslation();
+    const { serverOptions } = useAppContext();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isRunning, setIsRunning] = useState(false);
     const [isReady, setIsReady] = useState(false);
     const [isThinking, setIsThinking] = useState(false);
-    const [responsePreset, setResponsePreset] = useState<ResponsePreset>('balanced');
+    const responsePreset = serverOptions?.responsePreset ?? 'balanced';
     const systemPrompt = 'systemPrompt' in RESPONSE_PRESETS[responsePreset]
         ? RESPONSE_PRESETS[responsePreset].systemPrompt
         : undefined;
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         if (serverStatus === 'running') {
@@ -60,11 +72,16 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
         scrollToBottom();
     }, [messages, isThinking]);
 
+    const stopResponse = () => {
+        abortControllerRef.current?.abort();
+    };
+
     const handleSend = async () => {
-        if (!input.trim() || !isReady) return;
+        if (!input.trim() || !isReady || isThinking) return;
 
         const userMsg = input;
         setInput('');
+        if (inputRef.current) inputRef.current.style.height = 'auto';
         setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
         setIsReady(false);
         setIsThinking(true);
@@ -79,9 +96,13 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
                     ...messages.filter(message => message.role !== 'system'),
                     { role: 'user' as const, content: userMsg },
                 ];
+                const controller = new AbortController();
+                abortControllerRef.current = controller;
                 const response = await fetch(`${API_BASE_URL}/chat/completions`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                     body: JSON.stringify({
                         model: selectedModel,
                         messages: history,
@@ -89,12 +110,15 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
                         top_p: RESPONSE_PRESETS[responsePreset].topP,
                         stream: true,
                     }),
+                    signal: controller.signal,
                 });
                 if (!response.ok || !response.body) throw new Error(`API request failed (${response.status})`);
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
+                let rawAssistant = '';
+                let rawReasoning = '';
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
@@ -106,8 +130,15 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
                         const payload = line.slice(5).trim();
                         if (payload === '[DONE]') continue;
                         try {
-                            const content = JSON.parse(payload).choices?.[0]?.delta?.content;
-                            if (content) setMessages(prev => [...prev.slice(0, -1), { role: 'assistant', content: (prev[prev.length - 1]?.content || '') + content }]);
+                            const delta = JSON.parse(payload).choices?.[0]?.delta;
+                            const content = delta?.content || '';
+                            const reasoning = delta?.reasoning_content || '';
+                            if (content || reasoning) {
+                                rawAssistant += content;
+                                rawReasoning += reasoning;
+                                const parsed = splitReasoning(rawAssistant, rawReasoning);
+                                setMessages(prev => [...prev.slice(0, -1), { role: 'assistant', ...parsed }]);
+                            }
                         } catch {
                             // Ignore malformed SSE chunks.
                         }
@@ -115,17 +146,26 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
                 }
                 setIsReady(true);
                 setIsThinking(false);
+                abortControllerRef.current = null;
             } else {
                 await FlmService.sendChatMessage(userMsg);
             }
         } catch (e) {
             setIsReady(true);
             setIsThinking(false);
-            setMessages(prev => [...prev, { role: 'system', content: t('chat.system_error', { error: e }) }]);
+            abortControllerRef.current = null;
+            if (!(e instanceof DOMException && e.name === 'AbortError')) {
+                setMessages(prev => [...prev, { role: 'system', content: t('chat.system_error', { error: e }) }]);
+            }
         }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Escape' && isThinking) {
+            e.preventDefault();
+            stopResponse();
+            return;
+        }
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
@@ -136,35 +176,23 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
         <div className="flex flex-col h-full gap-4">
             {/* Header / Controls */}
             <div className="flex items-center gap-4 p-4 bg-card rounded-xl border shadow-sm">
-                <div className="flex-1 flex items-center gap-4">
-                    <Select
-                        value={selectedModel}
-                        onValueChange={onSelectModel}
-                        disabled={isRunning}
-                    >
-                        <SelectTrigger className="w-[250px]">
-                            <SelectValue placeholder={t('chat.select_model')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {models.map(model => (
-                                <SelectItem key={model.name} value={model.name}>
-                                    {model.name} ({model.size})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                <div className="flex min-w-0 flex-1 items-baseline gap-5">
+                    <div className="flex min-w-0 items-baseline gap-1.5 text-[13px]">
+                        <span className="shrink-0 text-muted-foreground/50">Model:</span>
+                        <span className="truncate font-mono text-foreground" title={selectedModel}>
+                            {selectedModel || t('chat.select_model')}
+                        </span>
+                    </div>
 
-                    <Select value={responsePreset} onValueChange={(value) => setResponsePreset(value as ResponsePreset)}>
-                        <SelectTrigger className="w-[130px]">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="precise">{t('chat.sampling_precise')}</SelectItem>
-                            <SelectItem value="balanced">{t('chat.sampling_balanced')}</SelectItem>
-                            <SelectItem value="creative">{t('chat.sampling_creative')}</SelectItem>
-                            <SelectItem value="caveman">{t('chat.caveman_mode')}</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div className="flex min-w-0 items-baseline gap-1.5 text-[13px]">
+                        <span className="shrink-0 text-muted-foreground/50">Preset:</span>
+                        <span className="truncate font-mono text-foreground" title={responsePreset}>
+                            {responsePreset === 'precise' && t('chat.sampling_precise')}
+                            {responsePreset === 'balanced' && t('chat.sampling_balanced')}
+                            {responsePreset === 'creative' && t('chat.sampling_creative')}
+                            {responsePreset === 'caveman' && t('chat.caveman_mode')}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -221,9 +249,19 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
                                             : "bg-transparent text-xs text-muted-foreground font-mono"
                                 )}>
                                     {msg.role === 'assistant' ? (
-                                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                                            <ReactMarkdown>{msg.content}</ReactMarkdown>
-                                        </div>
+                                        <>
+                                            {msg.reasoning && (
+                                                <details className="mb-3 text-xs text-muted-foreground" open={isThinking && idx === messages.length - 1}>
+                                                    <summary className="cursor-pointer select-none font-medium">Thinking</summary>
+                                                    <div className="mt-2 border-l-2 border-border pl-3 whitespace-pre-wrap opacity-80">
+                                                        {msg.reasoning}
+                                                    </div>
+                                                </details>
+                                            )}
+                                            {msg.content && <div className="prose prose-sm dark:prose-invert max-w-none">
+                                                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                            </div>}
+                                        </>
                                     ) : (
                                         <div className="whitespace-pre-wrap">{msg.content}</div>
                                     )}
@@ -242,25 +280,40 @@ export const ChatView = ({ models, selectedModel, onSelectModel, serverStatus }:
                 </ScrollArea>
 
                 {/* Input Area */}
-                <div className="p-4 border-t bg-background/50 backdrop-blur supports-backdrop-filter:bg-background/50">
-                    <div className="max-w-3xl mx-auto flex gap-2">
-                        <Input
+                <div className={cn(
+                    "relative min-h-14 border-t bg-background/50 backdrop-blur supports-backdrop-filter:bg-background/50 transition-opacity",
+                    !isReady && "opacity-60"
+                )}>
+                        <textarea
                             ref={inputRef}
+                            rows={1}
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
+                            onInput={e => {
+                                e.currentTarget.style.height = 'auto';
+                                e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 128)}px`;
+                            }}
                             placeholder={isReady ? t('chat.type_message') : isRunning ? t('chat.waiting_model') : t('chat.start_model_to_chat')}
-                            disabled={!isReady}
-                            className="flex-1"
+                            disabled={!isRunning}
+                            className="h-full min-h-14 max-h-32 w-full resize-none content-center rounded-none border-0 bg-transparent px-4 py-3 pr-24 text-sm text-foreground shadow-none outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
                         />
                         <Button
-                            onClick={handleSend}
-                            disabled={!isReady || !input.trim()}
-                            size="icon"
+                            onClick={isThinking ? stopResponse : handleSend}
+                            disabled={isThinking ? false : !isReady || !input.trim()}
+                            aria-label={isThinking ? "Stop" : "Send"}
+                            title={isThinking ? "Stop" : "Send"}
+                            className={cn(
+                                "absolute inset-y-0 right-0 !h-auto w-20 rounded-none rounded-r-lg border-0 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset active:brightness-90",
+                                isThinking
+                                    ? "bg-muted text-foreground hover:bg-accent"
+                                    : input.trim() && isReady
+                                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                                        : "bg-muted text-muted-foreground"
+                            )}
                         >
-                            <Send className="w-4 h-4" />
+                            {isThinking ? <Square className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                         </Button>
-                    </div>
                 </div>
             </Card>
         </div>

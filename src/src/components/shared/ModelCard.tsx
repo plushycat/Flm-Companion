@@ -1,4 +1,4 @@
-import { RefreshCw, Trash2, Download, Brain, Eye, Layers, Mic, AlertTriangle, XCircle } from "lucide-react";
+import { RefreshCw, Trash2, Download, Brain, Eye, Layers, Mic, AlertTriangle, XCircle, X } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import {
@@ -29,7 +29,9 @@ interface ModelCardProps {
     isDownloading?: boolean;
     downloadProgress?: number;
     downloadStatus?: string;
+    downloadBytes?: string | null;
     onDownload?: (modelName: string) => void;
+    onCancelDownload?: () => void;
     onDelete?: (modelName: string) => void;
     disabled?: boolean;
 }
@@ -45,7 +47,9 @@ export function ModelCard({
     isDownloading = false,
     downloadProgress = 0,
     downloadStatus = "",
+    downloadBytes = null,
     onDownload,
+    onCancelDownload,
     onDelete,
     disabled = false,
 }: ModelCardProps) {
@@ -164,7 +168,18 @@ export function ModelCard({
 
                 {/* Download Progress */}
                 {isDownloading && (
-                    <DownloadProgress progress={downloadProgress} status={downloadStatus} />
+                    <>
+                        <DownloadProgress progress={downloadProgress} status={downloadStatus} totalSize={model.size} bytes={downloadBytes} />
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={onCancelDownload}
+                            className="h-8 w-8 border-red-500/40 text-red-400 hover:bg-red-500/10"
+                            title={t("common.cancel")}
+                        >
+                            <X size={16} />
+                        </Button>
+                    </>
                 )}
 
                 {/* Action Buttons */}
@@ -211,13 +226,21 @@ export function ModelCard({
 function DownloadProgress({
     progress,
     status,
+    totalSize,
+    bytes,
 }: {
     progress: number;
     status: string;
+    totalSize: string;
+    bytes?: string | null;
 }) {
+    const downloaded = bytes ? bytes.split(" /")[0] : "—";
+    const total = bytes ? bytes.split(" /")[1] : totalSize;
+
     return (
         <div className="flex flex-col items-end gap-1 min-w-[140px]">
-            <div className="flex justify-end w-full text-xs">
+            <div className="flex justify-between w-full text-xs gap-2">
+                <span className="text-muted-foreground">{downloaded} / {total}</span>
                 <span className="text-blue-400 font-medium">{progress}%</span>
             </div>
             <div className="w-full bg-secondary rounded-full h-1.5">
@@ -227,7 +250,7 @@ function DownloadProgress({
                     style={{ width: `${progress}%` }}
                 />
             </div>
-            <div className="text-[10px] text-muted-foreground truncate max-w-[140px] text-right">
+            <div className="text-[10px] text-muted-foreground truncate max-w-[140px] text-right" title={status}>
                 {status}
             </div>
         </div>

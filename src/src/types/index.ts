@@ -76,6 +76,7 @@ export interface AppConfig {
     flmPath: string;
     lastSelectedModel: string;
     serverOptions: ServerOptions;
+    chatResponsePreset: ResponsePreset;
     presetsConfig?: PresetsConfig;
 }
 
@@ -149,6 +150,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
     flmPath: "flm",
     lastSelectedModel: "",
     serverOptions: DEFAULT_SERVER_OPTIONS,
+    chatResponsePreset: "balanced",
     presetsConfig: DEFAULT_PRESETS_CONFIG,
 };
 

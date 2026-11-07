@@ -123,7 +123,8 @@ export const ServerView = ({
         ? findPresetById(selectedModel, presetsConfig)?.model
         : selectedModel;
     const selectedModelInfo = models.find(model => model.name === selectedModelName);
-    const maxContextLength = selectedModelInfo?.maxContextLength || selectedModelInfo?.contextLength || 32768;
+    const maxContextLength = selectedModelInfo?.maxContextLength ?? CONTEXT_LENGTHS[CONTEXT_LENGTHS.length - 1];
+    const reportedMaxContextLength = selectedModelInfo?.maxContextLength;
     const contextChoices = CONTEXT_LENGTHS.filter(length => length <= maxContextLength);
     const defaultPrefillLength = selectedModelInfo?.maxPrefillLength || 4096;
     const prefillChoices = PREFILL_LENGTHS.filter(length => length <= defaultPrefillLength);
@@ -299,13 +300,13 @@ export const ServerView = ({
                                 <InfoTooltip text={t('server.launch_context_desc')} />
                             </div>
                             <div className="mt-1 font-mono text-sm text-foreground">{formatTokenCount(contextValue)}</div>
-                            <div className="mt-0.5 text-xs text-muted-foreground">{t('server.max_supported')}: {formatTokenCount(maxContextLength)}</div>
+                            <div className="mt-0.5 text-xs text-muted-foreground">{t('server.max_supported')}: {reportedMaxContextLength ? formatTokenCount(reportedMaxContextLength) : "—"}</div>
                         </div>
                         <div className="rounded-lg border border-border bg-card px-3 py-2">
                             <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('server.api_metrics')}</div>
                             <div className="mt-1 flex items-center gap-3 text-xs">
                                 <span className="text-muted-foreground">TTFT <span className="font-mono text-foreground">{apiMetrics.ttftMs ? `${apiMetrics.ttftMs} ms` : "—"}</span></span>
-                                <span className="text-muted-foreground">CTX <span className="font-mono text-foreground">{apiMetrics.promptTokens ? `${formatTokenCount(apiMetrics.promptTokens)} / ${formatTokenCount(maxContextLength)}` : "—"}</span></span>
+                                <span className="text-muted-foreground">CTX <span className="font-mono text-foreground">{apiMetrics.promptTokens ? `${formatTokenCount(apiMetrics.promptTokens)}${reportedMaxContextLength ? ` / ${formatTokenCount(reportedMaxContextLength)}` : ""}` : "—"}</span></span>
                             </div>
                         </div>
                     </div>
@@ -613,7 +614,7 @@ export const ServerView = ({
                                                         <Select
                                                             value={options.backend || "__auto__"}
                                                             onValueChange={(value) => handleOptionChange('backend', value === "__auto__" ? "" : value)}
-                                                            disabled={serverStatus !== "stopped" || supportedBackends.length === 0}
+                                                            disabled={serverStatus !== "stopped"}
                                                         >
                                                             <SelectTrigger className="bg-input border-input text-foreground h-9"><SelectValue /></SelectTrigger>
                                                             <SelectContent>

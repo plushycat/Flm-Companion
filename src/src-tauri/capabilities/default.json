@@ -88,6 +88,9 @@
           "path": "**\\model_list.json"
         },
         {
+          "path": "**\\models\\*\\config.json"
+        },
+        {
           "path": "$APPCONFIG/*"
         }
       ]

@@ -17,15 +17,13 @@ import { findPresetById, isPresetId } from "./lib/presets";
 
 // Wrappers
 function ChatViewWrapper() {
-  const { runnableModels, selectedModel, setSelectedModel, serverStatus, presetsConfig } = useAppContext();
+  const { selectedModel, serverStatus, presetsConfig } = useAppContext();
   const activeModel = isPresetId(selectedModel)
     ? findPresetById(selectedModel, presetsConfig)?.model || selectedModel
     : selectedModel;
   return (
     <ChatView
-      models={runnableModels}
       selectedModel={activeModel}
-      onSelectModel={setSelectedModel}
       serverStatus={serverStatus}
     />
   );
@@ -104,21 +102,23 @@ function AppContent() {
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
 
   const renderContent = () => {
-    if (activeTab === "chat" || activeTab === "server") {
-      return (
-        <div className="h-full">
-          <div className={activeTab === "chat" ? "h-full" : "hidden"}>
-            <ChatViewWrapper />
-          </div>
-          <div className={activeTab === "server" ? "h-full" : "hidden"}>
-            <ServerViewWrapper />
-          </div>
+    const Component = TAB_COMPONENTS[activeTab];
+    return (
+      <div className="h-full">
+        <div className={activeTab === "chat" ? "h-full" : "hidden"}>
+          <ChatViewWrapper />
         </div>
-      );
-    }
-
-    const Component = TAB_COMPONENTS[activeTab] || ChatViewWrapper;
-    return <Component />;
+        <div className={activeTab === "server" ? "h-full" : "hidden"}>
+          <ServerViewWrapper />
+        </div>
+        <div className={activeTab === "models" ? "h-full" : "hidden"}>
+          <ModelsWrapper />
+        </div>
+        {activeTab !== "chat" && activeTab !== "server" && activeTab !== "models" && Component && (
+          <Component />
+        )}
+      </div>
+    );
   };
 
   // Show FLM install dialog if FLM is not installed (non-closable)

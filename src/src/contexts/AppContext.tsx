@@ -8,7 +8,7 @@ import { FlmService, setFlmAvailability } from "../services/flm";
 import { NotificationService } from "../services/notification";
 import { StartupService, type StartupCheckResult } from "../services/startup";
 import { DEFAULT_PRESETS_CONFIG } from "../types";
-import type { Theme, ServerStatus, ServerOptions, FlmModel, HardwareInfo, PresetsConfig, ServerPreset } from "../types";
+import type { Theme, ServerStatus, ServerOptions, FlmModel, HardwareInfo, PresetsConfig, ServerPreset, ResponsePreset } from "../types";
 
 export interface AppContextType {
     // Config
@@ -19,6 +19,8 @@ export interface AppContextType {
     flmPath: string;
     setFlmPath: (path: string) => void;
     isConfigLoaded: boolean;
+    chatResponsePreset: ResponsePreset;
+    setChatResponsePreset: (preset: ResponsePreset) => void;
 
     // Models
     installedModels: FlmModel[];
@@ -222,6 +224,8 @@ export function AppProvider({ children }: AppProviderProps) {
         flmPath: config.flmPath,
         setFlmPath: config.setFlmPath,
         isConfigLoaded: config.isConfigLoaded,
+        chatResponsePreset: config.chatResponsePreset,
+        setChatResponsePreset: config.setChatResponsePreset,
 
         // Models
         installedModels: models.installedModels,

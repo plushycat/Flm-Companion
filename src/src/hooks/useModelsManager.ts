@@ -133,9 +133,14 @@ export function useModelsManager({
             handleDownloadModel(event.payload);
         });
 
+        const unlistenCancelDownload = listen("request-cancel-download", () => {
+            FlmService.cancelPullModel();
+        });
+
         return () => {
             unlistenDelete.then((f) => f());
             unlistenDownload.then((f) => f());
+            unlistenCancelDownload.then((f) => f());
         };
     }, [handleDeleteModel, handleDownloadModel]);
 

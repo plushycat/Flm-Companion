@@ -43,6 +43,8 @@ pub fn handle_menu_event(app: &AppHandle, event_id: &str) {
 }
 
 fn handle_quit(app: &AppHandle) {
+    let _ = app.emit("request-cancel-download", ());
+    std::thread::sleep(std::time::Duration::from_millis(250));
     crate::commands::stop_owned_flm_process();
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.destroy();

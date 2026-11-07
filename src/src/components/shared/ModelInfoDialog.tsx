@@ -156,7 +156,7 @@ export function ModelInfoDialog({ model, performanceWarning = "none", trigger }:
                     />
                     <ModelInfoRow
                         label={t("models.info_context")}
-                        value={`${model.contextLength || "?"} tokens`}
+                        value={`${model.maxContextLength || model.contextLength || "?"} tokens`}
                     />
                     {model.url && (
                         <div className="grid grid-cols-3 items-center gap-4">

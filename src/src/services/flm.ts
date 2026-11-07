@@ -31,11 +31,26 @@ interface ModelJsonEntry {
     };
 }
 
-function getModelMaxContextLength(defaultLength: number, declaredMax?: number): number {
-    return declaredMax && declaredMax > 0 ? declaredMax : defaultLength;
+interface ModelConfigJson {
+    max_context_length?: number;
+    max_position_embeddings?: number;
+}
+
+async function readModelMaxContext(modelName: string, modelRoots: string[]): Promise<number | undefined> {
+    for (const root of modelRoots) {
+        try {
+            const config: ModelConfigJson = JSON.parse(
+                await readTextFile(`${root}\\${modelName}\\config.json`)
+            );
+            const maxContext = config.max_context_length ?? config.max_position_embeddings;
+            if (maxContext && maxContext > 0) return maxContext;
+        } catch { /* model not installed or config unavailable */ }
+    }
+    return undefined;
 }
 
 let serverProcess: Child | null = null;
+let downloadProcess: Child | null = null;
 let metadataCache: Record<string, FlmModel> | null = null;
 let installedModelsCache: FlmModel[] | null = null;
 let availableModelsCache: FlmModel[] | null = null;
@@ -74,11 +89,20 @@ function getDirectory(path: string): string {
 export const FlmService = {
     async getSupportedBackends(): Promise<string[]> {
         try {
-            const output = await Command.create("flm", ["serve", "--help"]).execute();
-            const help = `${output.stdout}\n${output.stderr}`;
             const backends = new Set<string>();
-            const examples = /^\s*flm\s+(?:run|serve)\b.*--backend\s+([a-z][a-z0-9_-]*)/gim;
-            for (const match of help.matchAll(examples)) backends.add(match[1]);
+            for (const args of [["serve", "--help"], ["--help"]]) {
+                try {
+                    const output = await Command.create("flm", args).execute();
+                    const help = `${output.stdout}\n${output.stderr}`;
+                    for (const line of help.split(/\r?\n/)) {
+                        if (!/^\s*flm\s+(?:run|serve)\b/i.test(line)) continue;
+                        const match = line.match(/--backend(?:\s+|=)([a-z][a-z0-9_-]*)/i);
+                        if (match) backends.add(match[1]);
+                    }
+                } catch {
+                    // Older FLM versions may not support every help command.
+                }
+            }
             return [...backends];
         } catch (error) {
             console.error("Failed to discover FLM backends:", error);
@@ -108,11 +132,13 @@ export const FlmService = {
 
             // Build ordered list of candidate paths for model_list.json
             const pathsToTry: string[] = [];
+            const modelRoots: string[] = [];
 
             if (flmPath && flmPath !== "flm") {
                 const cleanPath = flmPath.replace(/[\\/]+$/, '');
                 const separator = cleanPath.includes('\\') ? '\\' : '/';
                 pathsToTry.push(`${cleanPath}${separator}${MODEL_LIST_FILENAME}`);
+                modelRoots.push(`${cleanPath}${separator}models`);
             }
 
             // New default since FLM 0.9.37: %USERPROFILE%\.flm
@@ -120,12 +146,17 @@ export const FlmService = {
                 const psCmd = Command.create("powershell", ["-NonInteractive", "-NoProfile", "-WindowStyle", "Hidden", "-Command", "$env:USERPROFILE"]);
                 const psResult = await psCmd.execute();
                 if (psResult.code === 0 && psResult.stdout.trim()) {
-                    pathsToTry.push(`${psResult.stdout.trim()}\\.flm\\${MODEL_LIST_FILENAME}`);
+                    const userProfile = psResult.stdout.trim();
+                    pathsToTry.push(`${userProfile}\\.flm\\${MODEL_LIST_FILENAME}`);
+                    pathsToTry.push(`${userProfile}\\.config\\flm\\${MODEL_LIST_FILENAME}`);
+                    modelRoots.push(`${userProfile}\\.flm\\models`);
+                    modelRoots.push(`${userProfile}\\.config\\flm\\models`);
                 }
             } catch { /* ignore */ }
 
             // Old default (pre-0.9.37)
             pathsToTry.push(`C:\\Program Files\\flm\\${MODEL_LIST_FILENAME}`);
+            modelRoots.push(`C:\\Program Files\\flm\\models`);
 
             for (const modelListPath of pathsToTry) {
                 try {
@@ -159,7 +190,8 @@ export const FlmService = {
                                 isEmbed: fullName.toLowerCase().includes("embed"),
                                 isAudio: fullName.toLowerCase().includes("whisper"),
                                 contextLength: details.default_context_length,
-                                maxContextLength: getModelMaxContextLength(details.default_context_length, details.max_context_length),
+                                maxContextLength: details.max_context_length
+                                    ?? await readModelMaxContext(details.name, modelRoots),
                                 maxPrefillLength: details.max_prefill_len,
                                 quantization: details.details.quantization_level,
                                 url: details.url,
@@ -465,6 +497,7 @@ export const FlmService = {
                 const command = Command.create("flm", ["pull", modelName]);
 
                 command.on('close', (data: TerminatedPayload) => {
+                    downloadProcess = null;
                     if (data.code === 0) {
                         resolve();
                     } else {
@@ -473,6 +506,7 @@ export const FlmService = {
                 });
 
                 command.on('error', (error: string) => {
+                    downloadProcess = null;
                     reject(new Error(error));
                 });
 
@@ -486,11 +520,17 @@ export const FlmService = {
                     onProgress(text);
                 });
 
-                command.spawn().catch(reject);
+                command.spawn().then((process) => {
+                    downloadProcess = process;
+                }).catch(reject);
             } catch (error) {
                 reject(error);
             }
         });
+    },
+
+    async cancelPullModel(): Promise<void> {
+        await downloadProcess?.kill();
     },
 
     /**

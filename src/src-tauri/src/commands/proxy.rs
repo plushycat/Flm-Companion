@@ -154,7 +154,6 @@ fn handle_connection(
     let Some((method, path, headers)) = parse_request_head(&request_head) else {
         return;
     };
-
     if method == "OPTIONS" {
         let _ = write_response(&mut client, "204 No Content", "", true);
         return;
