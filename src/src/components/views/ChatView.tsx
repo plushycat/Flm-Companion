@@ -1,20 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { Brain, Send, Square, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/button';
 import { FlmService } from '../../services/flm';
-import { RESPONSE_PRESETS, type ServerStatus } from '../../types';
-import ReactMarkdown from 'react-markdown';
+import { RESPONSE_PRESETS, type ServerStatus, type ReasoningEffort } from '../../types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { cn } from '../../lib/utils';
 import { ScrollArea } from '../ui/scroll-area';
 import { Card } from '../ui/card';
 import { useAppContext } from '../../contexts';
-
-interface ChatMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    reasoning?: string;
-}
+import { isPresetId, findPresetById } from '../../lib/presets';
+import { ChatMessageItem, ChatInputBar, type ChatMessage } from '../chat';
 
 function splitReasoning(text: string, reasoning = '') {
     const start = text.indexOf('<think>');
@@ -36,7 +32,11 @@ interface ChatViewProps {
 const API_BASE_URL = 'http://127.0.0.1:52626/v1';
 export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
     const { t } = useTranslation();
-    const { serverOptions } = useAppContext();
+    const { serverOptions, installedModels, reasoningEffort, setReasoningEffort, presetsConfig } = useAppContext();
+    const actualModel = isPresetId(selectedModel)
+        ? findPresetById(selectedModel, presetsConfig)?.model || selectedModel
+        : selectedModel;
+    const isReasoningModel = installedModels.find(m => m.name === actualModel || m.name === selectedModel)?.isThink ?? false;
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isRunning, setIsRunning] = useState(false);
@@ -48,7 +48,6 @@ export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
         : undefined;
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLTextAreaElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
@@ -81,7 +80,6 @@ export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
 
         const userMsg = input;
         setInput('');
-        if (inputRef.current) inputRef.current.style.height = 'auto';
         setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
         setIsReady(false);
         setIsThinking(true);
@@ -104,11 +102,19 @@ export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        model: selectedModel,
+                        model: actualModel,
                         messages: history,
                         temperature: RESPONSE_PRESETS[responsePreset].temperature,
                         top_p: RESPONSE_PRESETS[responsePreset].topP,
                         stream: true,
+                        ...(isReasoningModel ? {
+                            reasoning_effort: reasoningEffort,
+                            enable_think: reasoningEffort !== 'none',
+                            enable_thinking: reasoningEffort !== 'none',
+                            chat_template_kwargs: {
+                                enable_thinking: reasoningEffort !== 'none',
+                            },
+                        } : {}),
                     }),
                     signal: controller.signal,
                 });
@@ -160,22 +166,17 @@ export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Escape' && isThinking) {
-            e.preventDefault();
-            stopResponse();
-            return;
-        }
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-    };
-
     return (
-        <div className="flex flex-col h-full gap-4">
-            {/* Header / Controls */}
-            <div className="flex items-center gap-4 p-4 bg-card rounded-xl border shadow-sm">
+        <div className="flex flex-col h-full space-y-4 lg:space-y-5 min-h-0">
+            {/* Header */}
+            <div className="flex justify-between items-center px-1 shrink-0">
+                <h1 className="text-lg font-semibold text-foreground tracking-tight">
+                    {t('sidebar.chat')}
+                </h1>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center gap-4 p-4 bg-card rounded-xl border shadow-sm shrink-0">
                 <div className="flex min-w-0 flex-1 items-baseline gap-5">
                     <div className="flex min-w-0 items-baseline gap-1.5 text-[13px]">
                         <span className="shrink-0 text-muted-foreground/50">Model:</span>
@@ -192,6 +193,24 @@ export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
                             {responsePreset === 'creative' && t('chat.sampling_creative')}
                             {responsePreset === 'caveman' && t('chat.caveman_mode')}
                         </span>
+                    </div>
+                    <div className="flex min-w-0 items-center gap-1.5 text-[13px]" title={isReasoningModel ? '' : t('chat.reasoning_needs_think_model')}>
+                        <span className="shrink-0 text-muted-foreground/50">{t('chat.reasoning')}</span>
+                        <Select
+                            value={reasoningEffort}
+                            onValueChange={(v) => setReasoningEffort(v as ReasoningEffort)}
+                            disabled={!isReasoningModel}
+                        >
+                            <SelectTrigger className="h-6 w-[92px] shrink-0 px-2 text-[13px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">{t('chat.reasoning_off')}</SelectItem>
+                                <SelectItem value="low">{t('chat.reasoning_low')}</SelectItem>
+                                <SelectItem value="medium">{t('chat.reasoning_medium')}</SelectItem>
+                                <SelectItem value="high">{t('chat.reasoning_high')}</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
@@ -232,47 +251,12 @@ export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
                 <ScrollArea className="flex-1 p-4">
                     <div className="space-y-4 max-w-3xl mx-auto">
                         {messages.map((msg, idx) => (
-                            <div
+                            <ChatMessageItem
                                 key={idx}
-                                className={cn(
-                                    "flex w-full",
-                                    msg.role === 'user' ? "justify-end" : "justify-start",
-                                    msg.role === 'system' ? "justify-center" : ""
-                                )}
-                            >
-                                <div className={cn(
-                                    "rounded-lg px-4 py-2 max-w-[80%]",
-                                    msg.role === 'user'
-                                        ? "bg-primary text-primary-foreground"
-                                        : msg.role === 'assistant'
-                                            ? "bg-muted"
-                                            : "bg-transparent text-xs text-muted-foreground font-mono"
-                                )}>
-                                    {msg.role === 'assistant' ? (
-                                        <>
-                                            {msg.reasoning && (
-                                                <details
-                                                    className="mb-3 overflow-hidden rounded-md border border-border/60 bg-background/30 text-xs text-muted-foreground"
-                                                    open={isThinking && idx === messages.length - 1}
-                                                >
-                                                    <summary className="flex cursor-pointer select-none items-center gap-2 px-3 py-2 font-medium hover:text-foreground">
-                                                        <Brain className="h-3.5 w-3.5" />
-                                                        <span>{isThinking && idx === messages.length - 1 ? 'Thinking…' : 'Thought process'}</span>
-                                                    </summary>
-                                                    <div className="border-t border-border/60 px-3 py-2 whitespace-pre-wrap leading-relaxed opacity-75">
-                                                        {msg.reasoning}
-                                                    </div>
-                                                </details>
-                                            )}
-                                            {msg.content && <div className="prose prose-sm dark:prose-invert max-w-none">
-                                                <ReactMarkdown>{msg.content}</ReactMarkdown>
-                                            </div>}
-                                        </>
-                                    ) : (
-                                        <div className="whitespace-pre-wrap">{msg.content}</div>
-                                    )}
-                                </div>
-                            </div>
+                                message={msg}
+                                isLatestAssistant={idx === messages.length - 1}
+                                isThinking={isThinking}
+                            />
                         ))}
                         {isThinking && (
                             <div className="flex justify-start">
@@ -286,41 +270,15 @@ export const ChatView = ({ selectedModel, serverStatus }: ChatViewProps) => {
                 </ScrollArea>
 
                 {/* Input Area */}
-                <div className={cn(
-                    "relative min-h-14 border-t bg-background/50 backdrop-blur supports-backdrop-filter:bg-background/50 transition-opacity",
-                    !isReady && "opacity-60"
-                )}>
-                        <textarea
-                            ref={inputRef}
-                            rows={1}
-                            value={input}
-                            onChange={e => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            onInput={e => {
-                                e.currentTarget.style.height = 'auto';
-                                e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 128)}px`;
-                            }}
-                            placeholder={isReady ? t('chat.type_message') : isRunning ? t('chat.waiting_model') : t('chat.start_model_to_chat')}
-                            disabled={!isRunning}
-                            className="h-full min-h-14 max-h-32 w-full resize-none content-center rounded-none border-0 bg-transparent px-4 py-3 pr-24 text-sm text-foreground shadow-none outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
-                        />
-                        <Button
-                            onClick={isThinking ? stopResponse : handleSend}
-                            disabled={isThinking ? false : !isReady || !input.trim()}
-                            aria-label={isThinking ? "Stop" : "Send"}
-                            title={isThinking ? "Stop" : "Send"}
-                            className={cn(
-                                "absolute inset-y-0 right-0 !h-auto w-20 rounded-none rounded-r-lg border-0 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset active:brightness-90",
-                                isThinking
-                                    ? "bg-muted text-foreground hover:bg-accent"
-                                    : input.trim() && isReady
-                                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                                        : "bg-muted text-muted-foreground"
-                            )}
-                        >
-                            {isThinking ? <Square className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                        </Button>
-                </div>
+                <ChatInputBar
+                    input={input}
+                    setInput={setInput}
+                    onSend={handleSend}
+                    onStop={stopResponse}
+                    isReady={isReady}
+                    isRunning={isRunning}
+                    isThinking={isThinking}
+                />
             </Card>
         </div>
     );

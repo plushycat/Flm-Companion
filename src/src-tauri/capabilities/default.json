@@ -20,6 +20,12 @@
         },
         {
           "url": "https://objects.githubusercontent.com/*"
+        },
+        {
+          "url": "https://release-assets.githubusercontent.com/*"
+        },
+        {
+          "url": "https://*.githubusercontent.com/*"
         }
       ]
     },

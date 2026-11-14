@@ -19,6 +19,75 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export const GithubService = {
     /**
+     * Fallback to retrieve release info by querying GitHub HTML when API is rate-limited or fails
+     */
+    async fetchFromWeb(repoName: string, tag?: string): Promise<ReleaseInfo> {
+        const releaseUrl = tag
+            ? `https://github.com/${repoName}/releases/tag/${tag}`
+            : `https://github.com/${repoName}/releases/latest`;
+
+        let response = await fetch(releaseUrl);
+        if ([301, 302, 307, 308].includes(response.status)) {
+            const redirectUrl = response.headers.get('location');
+            if (redirectUrl) {
+                response = await fetch(redirectUrl.startsWith('http') ? redirectUrl : `https://github.com${redirectUrl}`);
+            }
+        }
+
+        let resolvedTag = tag;
+        const location = response.headers.get('location');
+        const targetUrl = location || response.url || '';
+        const tagMatch = targetUrl.match(/releases\/tag\/([^/?#]+)/);
+        if (tagMatch) {
+            resolvedTag = tagMatch[1];
+        }
+
+        if (!resolvedTag) {
+            const text = await response.text();
+            const match = text.match(/releases\/tag\/([^"'>]+)/);
+            if (match) {
+                resolvedTag = match[1];
+            }
+        }
+
+        if (!resolvedTag) {
+            throw new Error(`Could not determine release tag for ${repoName}`);
+        }
+
+        const assets: Asset[] = [];
+        try {
+            const assetsResp = await fetch(`https://github.com/${repoName}/releases/expanded_assets/${resolvedTag}`);
+            if (assetsResp.ok) {
+                const html = await assetsResp.text();
+                const regex = /href="([^"]*\/releases\/download\/[^"]+)"/g;
+                let m;
+                while ((m = regex.exec(html)) !== null) {
+                    const href = m[1];
+                    const fullUrl = href.startsWith('http') ? href : `https://github.com${href}`;
+                    const parts = href.split('/');
+                    const name = decodeURIComponent(parts[parts.length - 1]);
+                    if (!assets.some(a => a.name === name)) {
+                        assets.push({
+                            name,
+                            browser_download_url: fullUrl,
+                            size: 0
+                        });
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn(`[GithubService] Failed to load expanded assets for ${repoName}@${resolvedTag}:`, e);
+        }
+
+        return {
+            tag_name: resolvedTag,
+            body: '',
+            html_url: `https://github.com/${repoName}/releases/tag/${resolvedTag}`,
+            assets
+        };
+    },
+
+    /**
      * Get the latest release for a repository
      * @param repoName Format: "owner/repo"
      */
@@ -32,10 +101,20 @@ export const GithubService = {
         }
 
         try {
-            const response = await fetch(`https://api.github.com/repos/${repoName}/releases/latest`);
+            let response = await fetch(`https://api.github.com/repos/${repoName}/releases/latest`);
+            if (response.status === 301 || response.status === 302) {
+                const redirectUrl = response.headers.get('location');
+                if (redirectUrl) {
+                    response = await fetch(redirectUrl);
+                }
+            }
+
             if (!response.ok) {
                 if (response.status === 403) {
-                    throw new Error('GitHub API rate limit exceeded. Please try again later.');
+                    console.warn(`[GithubService] GitHub API 403 for ${repoName}, fallback to web.`);
+                    const webData = await this.fetchFromWeb(repoName);
+                    releaseCache.set(cacheKey, { data: webData, timestamp: Date.now() });
+                    return webData;
                 }
                 throw new Error(`Failed to fetch latest release for ${repoName}: ${response.statusText}`);
             }
@@ -43,8 +122,14 @@ export const GithubService = {
             releaseCache.set(cacheKey, { data, timestamp: Date.now() });
             return data;
         } catch (error) {
-            console.error(`Error fetching latest release for ${repoName}:`, error);
-            throw error;
+            console.warn(`[GithubService] Error fetching latest release from API for ${repoName}, trying web fallback:`, error);
+            try {
+                const webData = await this.fetchFromWeb(repoName);
+                releaseCache.set(cacheKey, { data: webData, timestamp: Date.now() });
+                return webData;
+            } catch {
+                throw error;
+            }
         }
     },
 
@@ -63,40 +148,47 @@ export const GithubService = {
         }
 
         try {
-            // Ensure tag has 'v' prefix if needed, or handle as is.
-            // GitHub API is strict about tag names.
-            // We'll try with the provided tag first.
             console.log(`[GithubService] Fetching release for tag "${tag}" from ${repoName}`);
             let response = await fetch(`https://api.github.com/repos/${repoName}/releases/tags/${tag}`);
 
             if (!response.ok && !tag.startsWith('v')) {
-                // Retry with 'v' prefix
-                console.log(`[GithubService] First attempt failed (${response.status}), retrying with "v" prefix: v${tag}`);
                 response = await fetch(`https://api.github.com/repos/${repoName}/releases/tags/v${tag}`);
             }
             
             if (!response.ok && tag.startsWith('v')) {
-                // Retry without 'v' prefix
                 const tagWithoutV = tag.substring(1);
-                console.log(`[GithubService] Retry with prefix failed (${response.status}), trying without "v": ${tagWithoutV}`);
                 response = await fetch(`https://api.github.com/repos/${repoName}/releases/tags/${tagWithoutV}`);
+            }
+
+            if (response.status === 301 || response.status === 302) {
+                const redirectUrl = response.headers.get('location');
+                if (redirectUrl) {
+                    response = await fetch(redirectUrl);
+                }
             }
 
             if (!response.ok) {
                 if (response.status === 403) {
-                    throw new Error('GitHub API rate limit exceeded. Please try again later.');
+                    console.warn(`[GithubService] GitHub API 403 for ${repoName}@${tag}, fallback to web.`);
+                    const webData = await this.fetchFromWeb(repoName, tag);
+                    releaseCache.set(cacheKey, { data: webData, timestamp: Date.now() });
+                    return webData;
                 }
                 const errorMsg = `Failed to fetch release ${tag} for ${repoName}: ${response.status} ${response.statusText}`;
-                console.error(`[GithubService] ${errorMsg}`);
                 throw new Error(errorMsg);
             }
             const data = await response.json();
-            console.log(`[GithubService] Successfully fetched release: ${data.tag_name}`);
             releaseCache.set(cacheKey, { data, timestamp: Date.now() });
             return data;
         } catch (error) {
-            console.error(`[GithubService] Error fetching release ${tag} for ${repoName}:`, error);
-            throw error;
+            console.warn(`[GithubService] Error fetching release ${tag} from API for ${repoName}, trying web fallback:`, error);
+            try {
+                const webData = await this.fetchFromWeb(repoName, tag);
+                releaseCache.set(cacheKey, { data: webData, timestamp: Date.now() });
+                return webData;
+            } catch {
+                throw error;
+            }
         }
     },
 

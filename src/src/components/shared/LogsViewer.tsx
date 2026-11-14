@@ -66,7 +66,7 @@ export function LogsViewer({
                         disabled={logs.length === 0}
                         className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer disabled:cursor-not-allowed"
                     >
-                        {copied ? <Check size={14} className="mr-1" /> : <Copy size={14} className="mr-1" />}
+                        {copied ? <Check size={14} className="mr-1 text-green-600 dark:text-green-400" /> : <Copy size={14} className="mr-1" />}
                         {copied ? t("logs.copied") : t("logs.copy")}
                     </Button>
                     {onClear && (
@@ -82,7 +82,7 @@ export function LogsViewer({
                         </Button>
                     )}
                 </div>
-                <div className={`font-mono text-xs space-y-1 bg-muted p-4 rounded-md ${className}`}>
+                <div className={`font-mono text-xs space-y-1 bg-secondary/50 dark:bg-black text-foreground dark:text-zinc-300 p-4 rounded-md border border-border dark:border-zinc-800 ${className}`}>
                     {logs.length === 0 ? (
                         <div className="text-muted-foreground text-center py-8 italic">
                             {displayEmptyMessage}
@@ -103,10 +103,10 @@ export function LogsViewer({
     // Card variant (default)
     return (
         <Card
-            className={`bg-muted border-border flex flex-col overflow-hidden shadow-inner ${className}`}
+            className={`bg-secondary/40 dark:bg-black border-border dark:border-zinc-800 flex flex-col overflow-hidden shadow-sm ${className}`}
         >
-            <CardHeader className="bg-card px-4 py-3 border-b border-border flex flex-row justify-between items-center space-y-0 shrink-0">
-                <CardTitle className="text-sm font-medium text-foreground flex items-center gap-2">
+            <CardHeader className="bg-secondary/70 dark:bg-zinc-950 px-4 py-3 border-b border-border dark:border-zinc-800 flex flex-row justify-between items-center space-y-0 shrink-0">
+                <CardTitle className="text-sm font-medium text-foreground dark:text-zinc-200 flex items-center gap-2">
                     <Terminal size={16} className="text-muted-foreground" />
                     {displayTitle}
                 </CardTitle>
@@ -116,10 +116,10 @@ export function LogsViewer({
                         size="sm"
                         onClick={handleCopy}
                         disabled={logs.length === 0}
-                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer disabled:cursor-not-allowed"
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 dark:hover:bg-zinc-900 cursor-pointer disabled:cursor-not-allowed"
                         title={t("logs.copy")}
                     >
-                        {copied ? <Check size={14} /> : <Copy size={14} />}
+                        {copied ? <Check size={14} className="text-green-600 dark:text-green-400" /> : <Copy size={14} />}
                     </Button>
                     {onClear && (
                         <Button
@@ -127,7 +127,7 @@ export function LogsViewer({
                             size="sm"
                             onClick={onClear}
                             disabled={logs.length === 0}
-                            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer disabled:cursor-not-allowed"
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/80 dark:hover:bg-zinc-900 cursor-pointer disabled:cursor-not-allowed"
                             title={t("logs.clear")}
                         >
                             <Trash2 size={14} />
@@ -135,9 +135,9 @@ export function LogsViewer({
                     )}
                 </div>
             </CardHeader>
-            <CardContent className="flex-1 p-4 overflow-y-auto font-mono text-xs space-y-1 min-h-0">
+            <CardContent className="flex-1 p-4 overflow-y-auto font-mono text-xs space-y-1 min-h-0 bg-secondary/30 dark:bg-black text-foreground dark:text-zinc-300">
                 {logs.length === 0 ? (
-                    <div className="text-muted-foreground text-center mt-20 italic">
+                    <div className="text-zinc-500 dark:text-zinc-500 text-center mt-20 italic">
                         {displayEmptyMessage}
                     </div>
                 ) : (

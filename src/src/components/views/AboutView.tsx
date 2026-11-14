@@ -13,14 +13,15 @@ import { ConfigService } from "../../services/config";
 import { GithubIcon } from "../icons";
 import { useAppContext } from "../../contexts/AppContext";
 import { UpdateService } from "../../services/update";
+import { ABOUT_CONFIG, APP_REPO_URL, FLM_REPO_URL, HARDWARE_SPEC_ROWS } from "../../data/about";
 
-const APP_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_COMPANION || "plushycat/Flm-Companion";
-const FLM_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_FLM || "FastFlowLM/FastFlowLM";
-const APP_REPO_URL = `https://github.com/${APP_REPO_NAME}`;
-const FLM_REPO_URL = `https://github.com/${FLM_REPO_NAME}`;
-const AMD_URL = import.meta.env.VITE_AMD_URL ?? 'https://ryzenai.docs.amd.com/en/latest/inst.html#install-npu-drivers';
-const COMPANION_EXE_NAME = import.meta.env.VITE_COMPANION_EXE || "flm-manager.exe";
-const FLM_EXE_NAME = import.meta.env.VITE_FLM_EXE || "flm-setup.msi";
+const {
+    appRepoName: APP_REPO_NAME,
+    flmRepoName: FLM_REPO_NAME,
+    amdUrl: AMD_URL,
+    companionExeName: COMPANION_EXE_NAME,
+    flmExeName: FLM_EXE_NAME,
+} = ABOUT_CONFIG;
 
 interface AboutViewProps {
     hardwareInfo: HardwareInfo | null;
@@ -142,7 +143,7 @@ export const AboutView = ({ hardwareInfo, onRefreshHardware }: AboutViewProps) =
                     setCompanionDownloadProgress(null);
                     setCompanionUpdateError(error === 'Installer not found in release assets'
                         ? t('about.error_installer_not_found')
-                        : t('about.error_download_install')
+                        : `${t('about.error_download_install')}: ${error}`
                     );
                 }
             },
@@ -205,7 +206,7 @@ export const AboutView = ({ hardwareInfo, onRefreshHardware }: AboutViewProps) =
                     setDownloadProgress(null);
                     setFlmUpdateError(error === 'Installer not found in release assets'
                         ? t('about.error_installer_not_found')
-                        : t('about.error_download_install')
+                        : `${t('about.error_download_install')}: ${error}`
                     );
                 }
             },
@@ -226,9 +227,15 @@ export const AboutView = ({ hardwareInfo, onRefreshHardware }: AboutViewProps) =
     const isCompanionUpdateAvailable = latestCompanionRelease && GithubService.isNewerVersion(companionVersion, latestCompanionRelease.tag_name);
 
     return (
-        <ScrollArea className="h-full pr-4">
-            <div className="space-y-8">
-                <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">{t('about.companion_app')}</h2>
+        <div className="h-full flex flex-col space-y-4 lg:space-y-5">
+            <div className="flex justify-between items-center px-1 shrink-0">
+                <h1 className="text-lg font-semibold text-foreground tracking-tight">
+                    {t('sidebar.about')}
+                </h1>
+            </div>
+            <ScrollArea className="flex-1 min-h-0 pr-4">
+                <div className="space-y-8 pb-8">
+                <h2 className="text-sm font-semibold text-foreground tracking-tight px-1 mb-3">{t('about.companion_app')}</h2>
 
                 <div className="bg-card rounded-xl border shadow-sm overflow-hidden mb-8">
                     {/* App Version Row */}
@@ -255,7 +262,7 @@ export const AboutView = ({ hardwareInfo, onRefreshHardware }: AboutViewProps) =
                         <div className="flex flex-col">
                             <span className="text-sm font-medium text-foreground">{t('about.updates')}</span>
                             {latestCompanionRelease && (
-                                <span className={`text-xs ${isCompanionUpdateAvailable ? 'text-yellow-500' : 'text-green-500'}`}>
+                                <span className={`text-xs ${isCompanionUpdateAvailable ? 'text-amber-600 dark:text-yellow-500' : 'text-green-600 dark:text-green-500'}`}>
                                     {isCompanionUpdateAvailable ? `${t('about.new_version')}${latestCompanionRelease.tag_name}` : t('about.up_to_date')}
                                 </span>
                             )}
@@ -312,25 +319,19 @@ export const AboutView = ({ hardwareInfo, onRefreshHardware }: AboutViewProps) =
                     )}
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('about.hardware')}</h2>
+                <div className="flex items-center justify-between px-1 mb-3">
+                    <h2 className="text-sm font-semibold text-foreground tracking-tight">{t('about.hardware')}</h2>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleRefreshHardware} disabled={isRefreshingHardware}>
                         <RefreshCw className={`h-3 w-3 ${isRefreshingHardware ? "animate-spin" : ""}`} />
                     </Button>
                 </div>
                 <div className="bg-card rounded-xl border shadow-sm overflow-hidden mb-8">
-                    <div className="flex items-center justify-between p-4 border-b last:border-0">
-                        <span className="text-sm font-medium text-foreground">{t('about.cpu')}</span>
-                        <div className="font-mono text-sm text-muted-foreground">{hardwareInfo?.cpu || "..."}</div>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border-b last:border-0">
-                        <span className="text-sm font-medium text-foreground">{t('about.ram')}</span>
-                        <div className="font-mono text-sm text-muted-foreground">{hardwareInfo?.ram || "..."}</div>
-                    </div>
-                    <div className="flex items-center justify-between p-4 border-b last:border-0">
-                        <span className="text-sm font-medium text-foreground">{t('about.npu_shared')}</span>
-                        <div className="font-mono text-sm text-muted-foreground">{hardwareInfo?.sharedMemory || "..."}</div>
-                    </div>
+                    {HARDWARE_SPEC_ROWS.map((spec) => (
+                        <div key={spec.key} className="flex items-center justify-between p-4 border-b last:border-0">
+                            <span className="text-sm font-medium text-foreground">{t(spec.labelKey)}</span>
+                            <div className="font-mono text-sm text-muted-foreground">{spec.getValue(hardwareInfo)}</div>
+                        </div>
+                    ))}
                     <div className="flex items-center justify-between p-4 border-b last:border-0">
                         <span className="text-sm font-medium text-foreground">{t('about.npu')}</span>
                         <div className="flex flex-col items-end">
@@ -352,7 +353,7 @@ export const AboutView = ({ hardwareInfo, onRefreshHardware }: AboutViewProps) =
                     </div>
                 </div>
 
-                <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">{t('about.fastflowlm')}</h2>
+                <h2 className="text-sm font-semibold text-foreground tracking-tight px-1 mb-3">{t('about.fastflowlm')}</h2>
                 <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                     {/* FLM Version Row */}
                     <div className="flex items-center justify-between p-4 border-b last:border-0">
@@ -378,7 +379,7 @@ export const AboutView = ({ hardwareInfo, onRefreshHardware }: AboutViewProps) =
                         <div className="flex flex-col">
                             <span className="text-sm font-medium text-foreground">{t('about.updates')}</span>
                             {latestFlmRelease && (
-                                <span className={`text-xs ${isFlmUpdateAvailable ? 'text-yellow-500' : 'text-green-500'}`}>
+                                <span className={`text-xs ${isFlmUpdateAvailable ? 'text-amber-600 dark:text-yellow-500' : 'text-green-600 dark:text-green-500'}`}>
                                     {isFlmUpdateAvailable ? `${t('about.new_version')}${latestFlmRelease.tag_name}` : t('about.up_to_date')}
                                 </span>
                             )}
@@ -449,5 +450,6 @@ export const AboutView = ({ hardwareInfo, onRefreshHardware }: AboutViewProps) =
                 </div>
             </div>
         </ScrollArea>
-    );
+    </div>
+);
 };

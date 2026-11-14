@@ -64,10 +64,14 @@ export const SettingsView = ({
     };
 
     return (
-        <ScrollArea className="h-full pr-4">
-            <div className="space-y-8 pb-8">
-                <div>
-                    <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-4">{t('settings.general_config')}</h2>
+        <div className="h-full flex flex-col space-y-4 lg:space-y-5">
+            <div className="flex justify-between items-center px-1 shrink-0">
+                <h1 className="text-lg font-semibold text-foreground tracking-tight">
+                    {t('sidebar.settings')}
+                </h1>
+            </div>
+            <ScrollArea className="flex-1 min-h-0 pr-4">
+                <div className="space-y-8 pb-8">
                     <div className="bg-card rounded-xl pl-6 pr-6 border border-border shadow-sm">
                         <SettingItem label={t('settings.language')}>
                             <Select
@@ -115,7 +119,7 @@ export const SettingsView = ({
                         </SettingItem>
                     </div>
                 </div>
-            </div>
-        </ScrollArea>
+            </ScrollArea>
+        </div>
     );
 };

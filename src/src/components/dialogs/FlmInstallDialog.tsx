@@ -7,10 +7,9 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import { ReleaseInfo } from '../../services/github';
 import { MINIMUM_FLM_VERSION } from '../../services/startup';
 import { UpdateService } from '../../services/update';
+import { FLM_REPO_URL, ABOUT_CONFIG } from '../../data/about';
 
-const FLM_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_FLM || "FastFlowLM/FastFlowLM";
-const FLM_REPO_URL = `https://github.com/${FLM_REPO_NAME}`;
-const FLM_EXE_NAME = import.meta.env.VITE_FLM_EXE || "flm-setup.exe";
+const FLM_EXE_NAME = ABOUT_CONFIG.flmExeName;
 
 interface FlmInstallDialogProps {
     open: boolean;
@@ -52,7 +51,7 @@ export const FlmInstallDialog = ({ open, flmRelease, onInstallComplete }: FlmIns
                     setDownloadProgress(null);
                     setDownloadError(error === 'Installer not found in release assets'
                         ? t('startup.error_installer_not_found')
-                        : t('startup.error_download_install')
+                        : `${t('startup.error_download_install')}: ${error}`
                     );
                 }
             },

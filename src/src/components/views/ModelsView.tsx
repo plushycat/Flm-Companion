@@ -182,14 +182,13 @@ export const ModelsView = ({ installedModels, onRefresh, hardwareInfo }: ModelsV
     });
 
     return (
-        <div className="h-full flex flex-col space-y-6">
+        <div className="h-full flex flex-col space-y-4 lg:space-y-5 pb-1">
             {/* Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center px-1 shrink-0">
                 <div>
-                    <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    <h1 className="text-lg font-semibold text-foreground tracking-tight">
                         {t("models.title")}
-                    </h2>
-                    <p className="text-muted-foreground text-sm">{t("models.subtitle")}</p>
+                    </h1>
                 </div>
                 <Button
                     variant="secondary"
@@ -273,17 +272,17 @@ interface ModelListProps {
 
 function ModelList({ title, icon, models, emptyMessage, renderModel, header }: ModelListProps) {
     return (
-        <div className="flex flex-col space-y-3 h-auto lg:h-full">
-            <div className="flex items-center justify-between gap-2 px-1">
+        <div className="flex flex-col space-y-2 h-full min-h-0">
+            <div className="h-8 flex items-center justify-between gap-2 px-1 shrink-0">
                 <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     {icon}
                     {title}
                 </h3>
-                {header}
+                {header || <div className="h-8" />}
             </div>
             <Card className="bg-card border-border overflow-hidden flex-1 flex flex-col shadow-sm min-h-0">
-                <CardContent className="p-0 flex-1 h-full relative">
-                    <ScrollArea className="h-[calc(50vh-130px)] lg:h-[calc(100vh-200px)]">
+                <CardContent className="p-0 flex-1 min-h-0 relative">
+                    <ScrollArea className="h-full">
                         {models.length === 0 ? (
                             <div className="p-8 text-center text-muted-foreground italic">
                                 {emptyMessage}

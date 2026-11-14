@@ -28,4 +28,9 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
+.codegraph/
 agent.md
+AGENTS.md
+GEMINI.md
+CHANGELOG_ARCHIVE.md
+CHANGELOG_PUBLIC.md

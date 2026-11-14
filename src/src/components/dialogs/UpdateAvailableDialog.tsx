@@ -10,13 +10,12 @@ import { exit } from '@tauri-apps/plugin-process';
 import ReactMarkdown from 'react-markdown';
 import { ScrollArea } from "../ui/scroll-area";
 import { UpdateService } from '../../services/update';
+import { ABOUT_CONFIG, APP_REPO_URL, FLM_REPO_URL } from '../../data/about';
 
-const APP_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_COMPANION || "plushycat/Flm-Companion";
-const APP_REPO_URL = `https://github.com/${APP_REPO_NAME}`;
-const FLM_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_FLM || "FastFlowLM/FastFlowLM";
-const FLM_REPO_URL = `https://github.com/${FLM_REPO_NAME}`;
-const COMPANION_EXE_NAME = import.meta.env.VITE_COMPANION_EXE || "flm-manager.exe";
-const FLM_EXE_NAME = import.meta.env.VITE_FLM_EXE || "flm-setup.msi";
+const {
+    companionExeName: COMPANION_EXE_NAME,
+    flmExeName: FLM_EXE_NAME,
+} = ABOUT_CONFIG;
 
 interface UpdateAvailableDialogProps {
     open: boolean;
@@ -68,7 +67,7 @@ export const UpdateAvailableDialog = ({ open, onOpenChange, onInstallComplete, c
                     setCompanionDownloadProgress(null);
                     setCompanionDownloadError(error === 'Installer not found in release assets'
                         ? t('startup.error_installer_not_found')
-                        : t('startup.error_download_install')
+                        : `${t('startup.error_download_install')}: ${error}`
                     );
                 }
             },
@@ -106,7 +105,7 @@ export const UpdateAvailableDialog = ({ open, onOpenChange, onInstallComplete, c
                     setFlmDownloadProgress(null);
                     setFlmDownloadError(error === 'Installer not found in release assets'
                         ? t('startup.error_installer_not_found')
-                        : t('startup.error_download_install')
+                        : `${t('startup.error_download_install')}: ${error}`
                     );
                 }
             },

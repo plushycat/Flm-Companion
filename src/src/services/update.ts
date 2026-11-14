@@ -41,10 +41,15 @@ export const UpdateService = {
                     return name === 'flm-setup.msi' || name === 'flm-setup.exe';
                 }
                 if (requestedName.includes('flm-manager') || requestedName.includes('companion')) {
-                    // Companion installer: flexible matching
-                    return (name.startsWith('flm.companion') || name.startsWith('flm companion')) && name.endsWith('.exe');
+                    // Companion installer: match exe containing companion or flm-manager
+                    return (name.includes('companion') || name.includes('flm-manager')) && name.endsWith('.exe');
                 }
-                // Fallback: any .exe file
+                return name.endsWith('.exe');
+            }) ?? release.assets.find(a => {
+                const name = a.name.toLowerCase();
+                return (name.includes('companion') || name.includes('flm-setup')) && name.endsWith('.msi');
+            }) ?? release.assets.find(a => {
+                const name = a.name.toLowerCase();
                 return name.endsWith('.exe') || name.endsWith('.msi');
             });
             if (!asset) {
@@ -54,8 +59,14 @@ export const UpdateService = {
 
             // Download with progress tracking
             onProgress?.(0);
-            const response = await fetch(asset.browser_download_url);
-            if (!response.ok) throw new Error('Download failed');
+            let response = await fetch(asset.browser_download_url);
+            if ([301, 302, 307, 308].includes(response.status)) {
+                const redirectUrl = response.headers.get('location');
+                if (redirectUrl) {
+                    response = await fetch(redirectUrl);
+                }
+            }
+            if (!response.ok) throw new Error(`Download failed: ${response.status} ${response.statusText}`);
             if (!response.body) throw new Error('No response body');
 
             const contentLength = +response.headers.get('Content-Length')!;
@@ -87,35 +98,49 @@ export const UpdateService = {
             const filename = asset.name;
             await writeFile(filename, allChunks, { baseDir: BaseDirectory.Temp });
 
-            // Launch installer as a tracked child process.
+            // Launch installer
             const tempDirPath = await tempDir();
-            const absolutePath = `${tempDirPath}${filename}`;
+            const cleanTemp = tempDirPath.replace(/[\\/]+$/, '');
+            const absolutePath = `${cleanTemp}\\${filename}`;
+            const safePath = absolutePath.replace(/'/g, "''");
             onProgress?.(null);
             onInstalling?.();
 
             if (monitorVersion) {
+                // Updating FLM background engine
                 await FlmService.stopServer();
-            }
 
-            const isMsi = filename.toLowerCase().endsWith('.msi');
-            const installer = Command.create('powershell', [
-                '-NoProfile',
-                '-NonInteractive',
-                '-WindowStyle',
-                'Hidden',
-                '-Command',
-                '$installer = $args[0]; $isMsi = $args[1] -eq "1"; if ($isMsi) { $quotedInstaller = ("{0}{1}{0}" -f [char]34, $installer); $p = Start-Process -FilePath "msiexec.exe" -ArgumentList @("/i", $quotedInstaller) -Wait -PassThru } else { $p = Start-Process -FilePath $installer -Wait -PassThru }; exit $p.ExitCode',
-                absolutePath,
-                isMsi ? '1' : '0',
-            ]);
-            const result = await installer.execute();
-            if (!INSTALLER_SUCCESS_CODES.has(result.code ?? -1)) {
-                throw new Error(`Installer exited with code ${result.code}`);
-            }
+                const isMsi = filename.toLowerCase().endsWith('.msi');
+                const commandString = isMsi
+                    ? `exit (Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', '${safePath}', '/passive', '/norestart') -Wait -PassThru).ExitCode`
+                    : `exit (Start-Process -FilePath '${safePath}' -Verb RunAs -Wait -PassThru).ExitCode`;
 
-            if (monitorVersion) {
+                const installer = Command.create('powershell', [
+                    '-NoProfile',
+                    '-NonInteractive',
+                    '-Command',
+                    commandString,
+                ]);
+                const result = await installer.execute();
+                if (!INSTALLER_SUCCESS_CODES.has(result.code ?? -1)) {
+                    throw new Error(`Installer exited with code ${result.code}`);
+                }
+
                 await this.waitForFlmVersion(release.tag_name, onSuccess);
             } else {
+                // Updating Companion: launch installer detached and notify success so Companion exits cleanly
+                const isMsi = filename.toLowerCase().endsWith('.msi');
+                const commandString = isMsi
+                    ? `Start-Process -FilePath 'msiexec.exe' -ArgumentList @('/i', '${safePath}')`
+                    : `Start-Process -FilePath '${safePath}' -Verb RunAs`;
+
+                const installer = Command.create('powershell', [
+                    '-NoProfile',
+                    '-NonInteractive',
+                    '-Command',
+                    commandString,
+                ]);
+                await installer.execute();
                 onSuccess?.();
             }
 

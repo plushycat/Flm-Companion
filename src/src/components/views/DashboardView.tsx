@@ -74,7 +74,7 @@ export const DashboardView = ({
                                         "destructive"
                             } className={
                                 serverStatus === "running" ? "bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20" :
-                                    serverStatus === "starting" ? "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/20" :
+                                    serverStatus === "starting" ? "bg-amber-500/10 text-amber-700 dark:text-yellow-500 hover:bg-amber-500/20 border-amber-500/20" :
                                         "bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20"
                             }>
                                 {serverStatus === "running" ? "EN LIGNE" : serverStatus === "starting" ? "DÉMARRAGE..." : "ARRÊTÉ"}

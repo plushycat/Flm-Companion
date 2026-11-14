@@ -1089,7 +1089,7 @@ dependencies = [
 
 [[package]]
 name = "flm-companion"
-version = "0.5.5"
+version = "0.5.6"
 dependencies = [
  "serde",
  "serde_json",

@@ -6,6 +6,7 @@ export type ServerStatus = "stopped" | "running" | "starting";
 
 export type PerformanceMode = "powersaver" | "balanced" | "performance" | "turbo";
 export type ResponsePreset = "precise" | "balanced" | "creative" | "caveman";
+export type ReasoningEffort = "none" | "low" | "medium" | "high";
 
 export const RESPONSE_PRESETS = {
     precise: { temperature: 0.2, topP: 0.8 },
@@ -77,6 +78,7 @@ export interface AppConfig {
     lastSelectedModel: string;
     serverOptions: ServerOptions;
     chatResponsePreset: ResponsePreset;
+    reasoningEffort: ReasoningEffort;
     presetsConfig?: PresetsConfig;
 }
 
@@ -151,6 +153,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
     lastSelectedModel: "",
     serverOptions: DEFAULT_SERVER_OPTIONS,
     chatResponsePreset: "balanced",
+    reasoningEffort: "none",
     presetsConfig: DEFAULT_PRESETS_CONFIG,
 };
 

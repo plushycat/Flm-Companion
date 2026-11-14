@@ -246,12 +246,38 @@ export const FlmService = {
 
         try {
             const script = `
-                $cpu = (Get-CimInstance Win32_Processor).Name
-                $mem = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
-                $ram = [math]::Round($mem / 1GB, 1)
-                $shared = [math]::Round($ram / 2, 1)
-                $sharedBytes = [math]::Round($mem / 2, 0)
-                
+                $cpuObj = (Get-CimInstance Win32_Processor | Select-Object -First 1).Name
+                $cpu = if ($cpuObj) { $cpuObj.Trim() } else { "Unknown" }
+                $memSys = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
+                $memModules = Get-CimInstance Win32_PhysicalMemory
+                $totalCapacity = ($memModules | Measure-Object -Property Capacity -Sum).Sum
+                $ramTotal = if ($totalCapacity -gt 0) { $totalCapacity } else { $memSys }
+                $ramGB = [math]::Round($ramTotal / 1GB, 0)
+                $shared = [math]::Round($ramGB / 2, 1)
+                $sharedBytes = [math]::Round($ramTotal / 2, 0)
+
+                $speed = ($memModules | Measure-Object -Property ConfiguredClockSpeed -Maximum).Maximum
+                if (-not $speed -or $speed -eq 0) {
+                    $speed = ($memModules | Measure-Object -Property Speed -Maximum).Maximum
+                }
+
+                $smbios = ($memModules | Select-Object -First 1).SMBIOSMemoryType
+                $memType = switch ($smbios) {
+                    24 { "DDR3" }
+                    26 { "DDR4" }
+                    30 { "LPDDR4" }
+                    31 { "LPDDR4X" }
+                    34 { "DDR5" }
+                    35 { if ($speed -ge 7500) { "LPDDR5X" } else { "LPDDR5" } }
+                    36 { "LPDDR5X" }
+                    default { "" }
+                }
+
+                $ramParts = @("$ramGB GB")
+                if ($memType) { $ramParts += $memType }
+                if ($speed -gt 0) { $ramParts += "@ $speed MHz" }
+                $ramDisplay = $ramParts -join " "
+
                 $npuName = ""
                 $npuDriver = "N/A"
 
@@ -265,8 +291,8 @@ export const FlmService = {
                 
                 @{
                     cpu = $cpu
-                    ram = "$ram GB"
-                    ramTotalBytes = $mem
+                    ram = $ramDisplay
+                    ramTotalBytes = $ramTotal
                     sharedMemory = "$shared GB (Max)"
                     sharedMemoryBytes = $sharedBytes
                     npuName = $npuName

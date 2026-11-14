@@ -125,7 +125,7 @@ export function ModelCard({
                             <TooltipTrigger asChild>
                                 <Badge
                                     variant="secondary"
-                                    className="px-1.5 py-0.5 h-5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30"
+                                    className="px-1.5 py-0.5 h-5 bg-amber-500/10 text-amber-700 dark:text-yellow-400 border border-amber-500/30 dark:border-yellow-500/30"
                                 >
                                     <AlertTriangle size={12} />
                                 </Badge>

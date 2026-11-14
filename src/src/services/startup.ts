@@ -6,7 +6,7 @@ import { ConfigService } from './config';
 export const MINIMUM_FLM_VERSION = import.meta.env.VITE_MINIMUM_FLM_VERSION || '0.9.37';
 
 const APP_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_COMPANION || "plushycat/Flm-Companion";
-const FLM_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_FLM || "FastFlowLM/FastFlowLM";
+const FLM_REPO_NAME = import.meta.env.VITE_GIT_PROJECT_FLM || "ROCm/FastFlowLM";
 
 export interface StartupCheckResult {
     flmInstalled: boolean;

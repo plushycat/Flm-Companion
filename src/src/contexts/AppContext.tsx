@@ -8,7 +8,7 @@ import { FlmService, setFlmAvailability } from "../services/flm";
 import { NotificationService } from "../services/notification";
 import { StartupService, type StartupCheckResult } from "../services/startup";
 import { DEFAULT_PRESETS_CONFIG } from "../types";
-import type { Theme, ServerStatus, ServerOptions, FlmModel, HardwareInfo, PresetsConfig, ServerPreset, ResponsePreset } from "../types";
+import type { Theme, ServerStatus, ServerOptions, FlmModel, HardwareInfo, PresetsConfig, ServerPreset, ResponsePreset, ReasoningEffort } from "../types";
 
 export interface AppContextType {
     // Config
@@ -21,6 +21,8 @@ export interface AppContextType {
     isConfigLoaded: boolean;
     chatResponsePreset: ResponsePreset;
     setChatResponsePreset: (preset: ResponsePreset) => void;
+    reasoningEffort: ReasoningEffort;
+    setReasoningEffort: (effort: ReasoningEffort) => void;
 
     // Models
     installedModels: FlmModel[];
@@ -226,6 +228,8 @@ export function AppProvider({ children }: AppProviderProps) {
         isConfigLoaded: config.isConfigLoaded,
         chatResponsePreset: config.chatResponsePreset,
         setChatResponsePreset: config.setChatResponsePreset,
+        reasoningEffort: config.reasoningEffort,
+        setReasoningEffort: config.setReasoningEffort,
 
         // Models
         installedModels: models.installedModels,

@@ -16,17 +16,17 @@ interface ServerStatusBadgeProps {
 const statusConfig = {
     running: {
         variant: "default" as const,
-        colorClass: "bg-green-500/10 text-green-500 border-green-500/20",
+        colorClass: "bg-green-500/10 text-green-700 dark:text-green-500 border-green-500/20",
         indicatorClass: "bg-green-500 animate-pulse",
     },
     starting: {
         variant: "secondary" as const,
-        colorClass: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-        indicatorClass: "bg-yellow-500 animate-bounce",
+        colorClass: "bg-amber-500/10 text-amber-700 dark:text-yellow-500 border-amber-500/20",
+        indicatorClass: "bg-amber-500 dark:bg-yellow-500 animate-bounce",
     },
     stopped: {
         variant: "destructive" as const,
-        colorClass: "bg-red-500/10 text-red-500 border-red-500/20",
+        colorClass: "bg-red-500/10 text-red-700 dark:text-red-500 border-red-500/20",
         indicatorClass: "bg-red-500",
     },
 };
@@ -83,9 +83,9 @@ export function ServerStatusIndicator({
             />
             <span
                 className={`font-medium ${status === "running"
-                    ? "text-green-500"
+                    ? "text-green-600 dark:text-green-500"
                     : status === "starting"
-                        ? "text-yellow-500"
+                        ? "text-amber-600 dark:text-yellow-500"
                         : "text-muted-foreground"
                     }`}
             >

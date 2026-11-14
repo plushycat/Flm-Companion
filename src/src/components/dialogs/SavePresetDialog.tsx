@@ -73,7 +73,7 @@ export const SavePresetDialog = ({
                             <div><span className="font-medium">{t('server.model')}:</span> {selectedModel || t('server.no_model')}</div>
                             <div><span className="font-medium">{t('server.performance_mode')}:</span> {options.pmode || "performance"}</div>
                             <div><span className="font-medium">{t('server.port')}:</span> {options.port || 52625}</div>
-                            {options.asr && <div className="text-yellow-500">• {t('server.asr_enabled')}</div>}
+                            {options.asr && <div className="text-amber-600 dark:text-yellow-500">• {t('server.asr_enabled')}</div>}
                             {options.embed && <div className="text-blue-500">• {t('server.embed_enabled')}</div>}
                             {options.cors && <div className="text-green-500">• {t('server.cors_enabled')}</div>}
                         </div>

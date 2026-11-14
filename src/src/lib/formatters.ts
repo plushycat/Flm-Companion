@@ -41,10 +41,20 @@ export function formatTime(date: Date = new Date()): string {
  * Get CSS class for log line based on content
  */
 export function getLogColorClass(log: string): string {
-    if (log.includes("[ERROR]")) return "text-red-400";
-    if (log.includes("[FLM]")) return "text-blue-400";
-    if (log.includes("[SYSTEM]")) return "text-yellow-400";
-    return "text-muted-foreground";
+    if (log.includes("[ERROR]")) return "text-red-600 dark:text-red-400 font-medium";
+    if (log.includes("[FLM]")) return "text-blue-700 dark:text-sky-400 font-medium";
+    if (log.includes("[SYSTEM]")) return "text-amber-700 dark:text-amber-300 font-medium";
+    return "text-zinc-800 dark:text-zinc-300";
+}
+
+/**
+ * Format token count (e.g. 4096 -> 4K)
+ */
+export function formatTokenCount(value: number): string {
+    if (value >= 1024 && value % 1024 === 0) {
+        return `${value / 1024}K`;
+    }
+    return value.toLocaleString();
 }
 
 /**
