@@ -31,6 +31,8 @@ interface SettingsViewProps {
     setTheme: (t: Theme) => void;
     startMinimized: boolean;
     setStartMinimized: (v: boolean) => void;
+    autoModelAlias: boolean;
+    setAutoModelAlias: (v: boolean) => void;
 }
 
 export const SettingsView = ({
@@ -38,6 +40,8 @@ export const SettingsView = ({
     setTheme,
     startMinimized,
     setStartMinimized,
+    autoModelAlias,
+    setAutoModelAlias,
 }: SettingsViewProps) => {
     const { t, i18n } = useTranslation();
     const [autostartEnabled, setAutostartEnabled] = useState(false);
@@ -100,6 +104,12 @@ export const SettingsView = ({
                             <Switch
                                 checked={autostartEnabled}
                                 onCheckedChange={toggleAutostart}
+                            />
+                        </SettingItem>
+                        <SettingItem label={t('settings.auto_model_alias')} description={t('settings.auto_model_alias_desc')}>
+                            <Switch
+                                checked={autoModelAlias}
+                                onCheckedChange={setAutoModelAlias}
                             />
                         </SettingItem>
                         <SettingItem label={t('settings.theme')}>

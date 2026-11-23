@@ -68,13 +68,15 @@ function ModelsWrapper() {
 }
 
 function SettingsWrapper() {
-  const { theme, setTheme, startMinimized, setStartMinimized } = useAppContext();
+  const { theme, setTheme, startMinimized, setStartMinimized, autoModelAlias, setAutoModelAlias } = useAppContext();
   return (
     <SettingsView
       theme={theme}
       setTheme={setTheme}
       startMinimized={startMinimized}
       setStartMinimized={setStartMinimized}
+      autoModelAlias={autoModelAlias}
+      setAutoModelAlias={setAutoModelAlias}
     />
   );
 }

@@ -36,6 +36,7 @@ pub fn run() {
             commands::get_system_stats,
             commands::start_api_proxy,
             commands::stop_api_proxy,
+            commands::set_auto_model_alias,
             commands::get_api_metrics
             ,commands::register_flm_process
             ,commands::stop_owned_flm_process

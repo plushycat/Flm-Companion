@@ -8,6 +8,8 @@ export interface AppContextType {
     setTheme: (theme: Theme) => void;
     startMinimized: boolean;
     setStartMinimized: (value: boolean) => void;
+    autoModelAlias: boolean;
+    setAutoModelAlias: (value: boolean) => void;
     flmPath: string;
     setFlmPath: (path: string) => void;
     isConfigLoaded: boolean;

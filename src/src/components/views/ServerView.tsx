@@ -44,7 +44,7 @@ export const ServerView = ({
     setOptions,
 }: ServerViewProps) => {
     const { t } = useTranslation();
-    const { presetsConfig, saveUserPreset, reloadPresets } = useAppContext();
+    const { presetsConfig, saveUserPreset, reloadPresets, autoModelAlias } = useAppContext();
     const [savePresetDialogOpen, setSavePresetDialogOpen] = useState(false);
     const [managePresetsDialogOpen, setManagePresetsDialogOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -124,9 +124,10 @@ export const ServerView = ({
     const estimatedRamBytes = modelLoadBytes + contextReserveBytes + runtimeReserveBytes;
     const [apiMetrics, setApiMetrics] = useState<ApiMetrics>({ requests: 0, ttftMs: null, promptTokens: null });
     const apiBaseUrl = `http://127.0.0.1:${API_PROXY_PORT}/v1`;
-    const apiModel = isPresetId(selectedModel)
+    const activeApiModel = isPresetId(selectedModel)
         ? findPresetById(selectedModel, presetsConfig)?.model || selectedModel
         : selectedModel;
+    const apiModel = autoModelAlias ? "flm-auto" : activeApiModel;
     const backendOptions = options.backend && !supportedBackends.includes(options.backend)
         ? [options.backend, ...supportedBackends]
         : supportedBackends;

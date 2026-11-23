@@ -114,6 +114,8 @@
     "start_minimized_desc": "Démarrer l'application réduite dans la barre d'état système.",
     "autostart": "Lancer au démarrage",
     "autostart_desc": "Lancer automatiquement l'application à l'ouverture de session.",
+    "auto_model_alias": "Modèle API statique (flm-auto)",
+    "auto_model_alias_desc": "Expose « flm-auto » dans /v1/models et redirige ses requêtes vers le modèle FLM actuellement lancé.",
     "theme": "Thème de l'interface",
     "theme_placeholder": "Thème",
     "theme_dark": "Sombre",

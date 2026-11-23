@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { ConfigService } from "../services/config";
 import { FlmService } from "../services/flm";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -10,6 +11,8 @@ interface UseConfigManagerReturn {
     setTheme: (theme: Theme) => void;
     startMinimized: boolean;
     setStartMinimized: (value: boolean) => void;
+    autoModelAlias: boolean;
+    setAutoModelAlias: (value: boolean) => void;
     flmPath: string;
     setFlmPath: (path: string) => void;
     isConfigLoaded: boolean;
@@ -23,6 +26,7 @@ interface UseConfigManagerReturn {
 export function useConfigManager(): UseConfigManagerReturn {
     const [theme, setTheme] = useState<Theme>(DEFAULT_APP_CONFIG.theme);
     const [startMinimized, setStartMinimized] = useState<boolean>(DEFAULT_APP_CONFIG.startMinimized);
+    const [autoModelAlias, setAutoModelAlias] = useState<boolean>(DEFAULT_APP_CONFIG.autoModelAlias ?? false);
     const [flmPath, setFlmPath] = useState<string>(DEFAULT_APP_CONFIG.flmPath);
     const [isConfigLoaded, setIsConfigLoaded] = useState<boolean>(false);
     const [chatResponsePreset, setChatResponsePreset] = useState<ResponsePreset>(DEFAULT_APP_CONFIG.chatResponsePreset);
@@ -36,6 +40,7 @@ export function useConfigManager(): UseConfigManagerReturn {
         ConfigService.loadConfig().then(async (config) => {
             setTheme(config.theme);
             setStartMinimized(config.startMinimized);
+            setAutoModelAlias(config.autoModelAlias ?? false);
 
             if (!config.startMinimized) {
                 const win = getCurrentWindow();
@@ -78,6 +83,12 @@ export function useConfigManager(): UseConfigManagerReturn {
         root.classList.add(theme);
     }, [theme]);
 
+    // Sync static API model alias toggle to backend proxy
+    useEffect(() => {
+        if (!isConfigLoaded) return;
+        invoke("set_auto_model_alias", { enabled: autoModelAlias }).catch(console.error);
+    }, [autoModelAlias, isConfigLoaded]);
+
     // Save config when settings change
     useEffect(() => {
         if (!isConfigLoaded) return;
@@ -89,6 +100,7 @@ export function useConfigManager(): UseConfigManagerReturn {
             const config: AppConfig = {
                 theme,
                 startMinimized,
+                autoModelAlias,
                 flmPath,
                 lastSelectedModel: externalSelectedModel,
                 serverOptions: externalServerOptions,
@@ -101,7 +113,7 @@ export function useConfigManager(): UseConfigManagerReturn {
 
         const timeoutId = setTimeout(saveSettings, 500);
         return () => clearTimeout(timeoutId);
-    }, [theme, startMinimized, flmPath, externalSelectedModel, externalServerOptions, chatResponsePreset, reasoningEffort, isConfigLoaded]);
+    }, [theme, startMinimized, autoModelAlias, flmPath, externalSelectedModel, externalServerOptions, chatResponsePreset, reasoningEffort, isConfigLoaded]);
 
     const saveExternalConfig = useCallback((selectedModel: string, serverOptions: ServerOptions) => {
         setExternalSelectedModel(selectedModel);
@@ -113,6 +125,8 @@ export function useConfigManager(): UseConfigManagerReturn {
         setTheme,
         startMinimized,
         setStartMinimized,
+        autoModelAlias,
+        setAutoModelAlias,
         flmPath,
         setFlmPath,
         isConfigLoaded,

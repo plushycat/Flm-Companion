@@ -116,6 +116,8 @@
     "start_minimized_desc": "起動時にシステムトレイに最小化します",
     "autostart": "スタートアップ起動",
     "autostart_desc": "ログイン時に自動的にアプリケーションを起動します",
+    "auto_model_alias": "静的 API モデル (flm-auto)",
+    "auto_model_alias_desc": "/v1/models に「flm-auto」を公開し、そのリクエストを現在起動中の FLM モデルへ転送します。",
     "theme": "テーマ",
     "theme_placeholder": "テーマを選択",
     "theme_dark": "ダーク",

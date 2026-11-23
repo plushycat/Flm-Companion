@@ -15,6 +15,7 @@ const PROXY_PORT: u16 = 52626;
 const MAX_REQUEST_BODY: usize = 8 * 1024 * 1024;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+const AUTO_MODEL_ALIAS_NAME: &str = "flm-auto";
 const CAVEMAN_INSTRUCTION: &str = "Speak like caveman. Ultra-short. Omit filler words. Maximum information density with minimal tokens.";
 
 struct ProxyHandle {
@@ -24,6 +25,7 @@ struct ProxyHandle {
 
 static PROXY: OnceLock<Mutex<Option<ProxyHandle>>> = OnceLock::new();
 static FLM_PID: AtomicU32 = AtomicU32::new(0);
+static AUTO_MODEL_ALIAS: AtomicBool = AtomicBool::new(false);
 static METRICS: OnceLock<ApiMetricsState> = OnceLock::new();
 
 struct ApiMetricsState {
@@ -106,6 +108,11 @@ pub fn get_api_metrics() -> ApiMetrics {
 }
 
 #[tauri::command]
+pub fn set_auto_model_alias(enabled: bool) {
+    AUTO_MODEL_ALIAS.store(enabled, Ordering::Relaxed);
+}
+
+#[tauri::command]
 pub fn stop_api_proxy() {
     if let Ok(mut state) = proxy_state().lock() {
         if let Some(handle) = state.take() {
@@ -159,11 +166,38 @@ fn handle_connection(
         return;
     }
 
-    if method == "GET" && path == "/v1/models" {
+    let auto_alias = AUTO_MODEL_ALIAS.load(Ordering::Relaxed);
+
+    if method == "GET" && path.trim_end_matches('/') == "/v1" {
+        let alias_field = if auto_alias {
+            format!(",\"static_model_alias\":\"{}\"", AUTO_MODEL_ALIAS_NAME)
+        } else {
+            String::new()
+        };
         let body = format!(
-            "{{\"object\":\"list\",\"data\":[{{\"id\":\"{}\",\"object\":\"model\",\"owned_by\":\"flm\"}}]}}",
-            json_escape(model)
+            "{{\"object\":\"api_info\",\"service\":\"flm-companion\",\"endpoints\":{{\"models\":\"/v1/models\",\"chat_completions\":\"/v1/chat/completions\"}},\"active_model\":\"{}\"{}}}",
+            json_escape(model),
+            alias_field
         );
+        let _ = write_response(&mut client, "200 OK", &body, true);
+        return;
+    }
+
+    if method == "GET" && path.trim_end_matches('/') == "/v1/models" {
+        let mut entries = Vec::new();
+        if auto_alias {
+            entries.push(format!(
+                "{{\"id\":\"{}\",\"object\":\"model\",\"owned_by\":\"flm\"}}",
+                AUTO_MODEL_ALIAS_NAME
+            ));
+        }
+        if !auto_alias || (!model.is_empty() && model != AUTO_MODEL_ALIAS_NAME) {
+            entries.push(format!(
+                "{{\"id\":\"{}\",\"object\":\"model\",\"owned_by\":\"flm\"}}",
+                json_escape(model)
+            ));
+        }
+        let body = format!("{{\"object\":\"list\",\"data\":[{}]}}", entries.join(","));
         let _ = write_response(&mut client, "200 OK", &body, true);
         return;
     }
@@ -179,7 +213,9 @@ fn handle_connection(
     };
 
     let body = if path.trim_end_matches('/') == "/v1/chat/completions" {
-        add_request_defaults(body, caveman, temperature, top_p)
+        add_request_defaults(body, model, auto_alias, caveman, temperature, top_p)
+    } else if auto_alias && !model.is_empty() {
+        rewrite_auto_model_body(body, model)
     } else {
         body
     };
@@ -206,13 +242,40 @@ fn handle_connection(
     let _ = client.shutdown(Shutdown::Both);
 }
 
-fn add_request_defaults(body: Vec<u8>, caveman: bool, temperature: f64, top_p: f64) -> Vec<u8> {
+fn rewrite_auto_model(object: &mut serde_json::Map<String, Value>, model: &str) {
+    if !model.is_empty() && object.get("model").and_then(Value::as_str) == Some(AUTO_MODEL_ALIAS_NAME) {
+        object.insert("model".to_string(), json!(model));
+    }
+}
+
+fn rewrite_auto_model_body(body: Vec<u8>, model: &str) -> Vec<u8> {
     let Ok(mut payload) = serde_json::from_slice::<Value>(&body) else {
         return body;
     };
     let Some(object) = payload.as_object_mut() else {
         return body;
     };
+    rewrite_auto_model(object, model);
+    serde_json::to_vec(&payload).unwrap_or(body)
+}
+
+fn add_request_defaults(
+    body: Vec<u8>,
+    model: &str,
+    auto_alias: bool,
+    caveman: bool,
+    temperature: f64,
+    top_p: f64,
+) -> Vec<u8> {
+    let Ok(mut payload) = serde_json::from_slice::<Value>(&body) else {
+        return body;
+    };
+    let Some(object) = payload.as_object_mut() else {
+        return body;
+    };
+    if auto_alias {
+        rewrite_auto_model(object, model);
+    }
     object
         .entry("temperature")
         .or_insert_with(|| json!(temperature));

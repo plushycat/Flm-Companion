@@ -160,6 +160,8 @@
     "start_minimized_desc": "Start the application minimized to the system tray.",
     "autostart": "Launch at Startup",
     "autostart_desc": "Automatically launch the application when you log in.",
+    "auto_model_alias": "Static API Model (flm-auto)",
+    "auto_model_alias_desc": "Expose 'flm-auto' in /v1/models and route requests using it to the currently launched FLM model.",
     "theme": "Theme",
     "theme_placeholder": "Theme",
     "theme_dark": "Dark",

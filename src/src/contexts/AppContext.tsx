@@ -16,6 +16,8 @@ export interface AppContextType {
     setTheme: (theme: Theme) => void;
     startMinimized: boolean;
     setStartMinimized: (value: boolean) => void;
+    autoModelAlias: boolean;
+    setAutoModelAlias: (value: boolean) => void;
     flmPath: string;
     setFlmPath: (path: string) => void;
     isConfigLoaded: boolean;
@@ -223,6 +225,8 @@ export function AppProvider({ children }: AppProviderProps) {
         setTheme: config.setTheme,
         startMinimized: config.startMinimized,
         setStartMinimized: config.setStartMinimized,
+        autoModelAlias: config.autoModelAlias,
+        setAutoModelAlias: config.setAutoModelAlias,
         flmPath: config.flmPath,
         setFlmPath: config.setFlmPath,
         isConfigLoaded: config.isConfigLoaded,
